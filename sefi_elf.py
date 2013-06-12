@@ -5,6 +5,7 @@ from elftools.construct.lib.container import Container
 from interval import IntervalSet, Interval
 
 from sefi_log import log
+import sefi_container
 
 def x_segments(elf_o):
 	''' go through elf object and find the executable segments '''
@@ -40,29 +41,77 @@ def cont_pp(cont, depth=0):
 				print(repr(v))
 
 def segment_data(elf_o, xsegs):
-	i_set = IntervalSet.between(0, 0)
+	i_set = None
 	count = 0
-
+	
 	for xs in xsegs:
 		log('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
+		cont_pp(xs, 2)
 		if xs['p_filesz'] < 1:
-			log('    segment is empty. skip it.')
+			#i think this is the right thing to do with an empty segment, not sure though.
+			log('    segment is empty on file. skip it.')
+			continue
+		if xs['p_filesz'] != xs['p_memsz']:
+			print("im not sure how to handle segments that have a different size in " + \
+					"memory than in the file; this might be bug. skipping this section")
 			continue
 
-		i_set = i_set | IntervalSet.between(xs['p_offset'], xs['p_offset'] + xs['p_filesz'])
+		#we add one to the interval so that contiguous segments will merge together
+		#(IntervalSet only combines intervals that overlap by at least one point)
+		#this means that for memory map purposes, the lower bound in inclusive and
+		#the upper bound is not.
+		ivl = IntervalSet.between(xs['p_vaddr'], xs['p_vaddr'] + xs['p_memsz'] + 1)
+		if not i_set:
+			i_set = ivl
+		else:
+			i_set = i_set | ivl
 
 	log('executable data interval %r' % i_set)
-		
+	sorted_xsegs = sorted(xsegs, key=lambda seg: seg['p_vaddr'])
+
 	for ivl in i_set:
-		print repr(ivl)
+		log(repr(ivl))
+		ivl_sz = (ivl.upper_bound-1 - ivl.lower_bound)
+
 		if ivl.__class__.__name__ != "Interval":
 			continue
-		if (ivl.upper_bound - ivl.lower_bound) < 1:
+		if ivl_sz < 1:
 			continue
 
-		elf_o.stream.seek(ivl.lower_bound)
-		bdata = elf_o.stream.read(ivl.upper_bound-ivl.lower_bound)
-		yield bdata
+		#this is trying to map the file bytes onto 
+		#a buffer in the same configuration that will happen
+		#at load time
+		bdata = ""
+		for xs in sorted_xsegs:
+			if xs['p_vaddr'] < ivl.lower_bound:
+				continue
+			elif xs['p_vaddr'] >= ivl.upper_bound:
+				break #the list is sorted
+
+			sz = xs['p_filesz'] #equal to p_memsz by assertion above
+			elf_o.stream.seek(xs['p_offset'])
+			data = elf_o.stream.read(sz)
+			start = xs['p_vaddr'] - ivl.lower_bound
+			if start == len(bdata):
+				bdata += data
+			else:
+				tmp = bdata[0:start] + data
+				if start+sz < len(bdata):
+					bdata = tmp + bdata[(start+sz):]
+				else:
+					bdata = tmp
+			
+			log('bdata is %d bytes' % len(bdata))
+				
+		if len(bdata) != ivl_sz:
+			raise Exception(
+				"len(bdata) = %d != %d = ivl_sz" % (
+					len(bdata),
+					ivl_sz
+				)
+			)
+		
+		yield sefi_container.Segment(bdata, ivl.lower_bound)
 		count += 1
 
 	if count < 1:
@@ -70,3 +119,4 @@ def segment_data(elf_o, xsegs):
 				'if you see this message and you are sure you provided a normal ' + \
 				'elf file, then this is probably a bug.')
 		
+	
