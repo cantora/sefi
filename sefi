@@ -4,9 +4,9 @@ import argparse
 import sys
 import os.path
 
-from sofi_log import log
-import sofi_log
-import sofi
+from sefi_log import log
+import sefi_log
+import sefi
 
 def opt_parser():
 
@@ -49,22 +49,22 @@ class MissingOption(Exception):
 def run(options):
 
 	if options.verbose == True:
-		sofi_log.set_verbose()
+		sefi_log.set_verbose()
 	else:
-		sofi_log.set_quiet()
+		sefi_log.set_quiet()
 
 	log(options)
 
 	if not options.file:
 		#elftools needs to be able to seek
 		#so we need to make stdin a normal file
-		with open("/tmp/sofi-stdin", "w") as f:
+		with open("/tmp/sefi-stdin", "w") as f:
 			f.write(sys.stdin.read())
 			f.close
-		options.file = open("/tmp/sofi-stdin", "r")
+		options.file = open("/tmp/sefi-stdin", "r")
 		
 	if not options.raw:
-		result = sofi.search_elf_for_ret_gadgets(options.file)
+		result = sefi.search_elf_for_ret_gadgets(options.file)
 	else:
 		print("raw mode not yet implemented");
 		exit(1)

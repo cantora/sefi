@@ -4,7 +4,7 @@ from elftools.elf.constants import P_FLAGS
 from elftools.construct.lib.container import Container
 from interval import IntervalSet, Interval
 
-from sofi_log import log
+from sefi_log import log
 
 def x_segments(elf_o):
 	''' go through elf object and find the executable segments '''
