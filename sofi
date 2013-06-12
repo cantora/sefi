@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+import os.path
+
+from sofi_log import log
+import sofi_log
+import sofi
+
+def opt_parser():
+
+	parser = argparse.ArgumentParser(description='search binary data for sequences of instructions')
+
+	parser.add_argument(
+		'file', 
+		nargs='?', 
+		type=argparse.FileType('r'),
+		help='file to search. if no file is given, stdin will be used',
+		default=False
+	)
+
+	parser.add_argument(
+		'-v', 
+		'--verbose', 
+		action='store_true', 
+		help='print debug output.'
+	)
+
+	parser.add_argument(
+		'--raw',
+		action='store_true', 
+		help='treat the input file as raw executable bytes (by default the input is parsed as an elf executable).'
+	)
+
+	parser.add_argument(
+		'--nx', 
+		action='store_true', 
+		help='look for instructions in non-executable segments. ignored when --raw is used.'
+	)
+
+	return parser
+
+
+class MissingOption(Exception):
+	pass
+
+
+def run(options):
+
+	if options.verbose == True:
+		sofi_log.set_verbose()
+	else:
+		sofi_log.set_quiet()
+
+	log(options)
+
+	if not options.file:
+		#elftools needs to be able to seek
+		#so we need to make stdin a normal file
+		with open("/tmp/sofi-stdin", "w") as f:
+			f.write(sys.stdin.read())
+			f.close
+		options.file = open("/tmp/sofi-stdin", "r")
+		
+	if not options.raw:
+		result = sofi.search_elf_for_ret_gadgets(options.file)
+	else:
+		print("raw mode not yet implemented");
+		exit(1)
+
+		
+if __name__ == "__main__":
+	opt_p = opt_parser()
+	options = opt_p.parse_args()
+
+	try:
+		run(options)
+	except MissingOption as e:
+		print(e)
+		print("")
+		opt_p.print_help()
+		exit(1)
+
