@@ -68,7 +68,7 @@ def run(options):
 		print("gadgets:")
 
 		for gadget in result:
-			print("  %r" % (gadget))
+			print("  %r\n" % (gadget))
 			
 	else:
 		print("raw mode not yet implemented");

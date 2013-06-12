@@ -3,6 +3,7 @@
 import argparse
 import sys
 import os.path
+import re
 
 from sefi_log import log
 import sefi_log
@@ -23,9 +24,9 @@ def search_data(segments, byte_seq, backward_search):
 					yield gadget
 
 
-def get_isn_seq(offset, data, arch):
+def get_ins_seq(offset, data, arch):
 	return map(
-		lambda insn: insn[3],
+		lambda insn: insn[2],
 		distorm3.Decode(offset,	data, arch)
 	)
 
@@ -36,6 +37,18 @@ def ins_seqs_equal(a, b):
 
 	return True
 
+def seq_has_illegal(ins_seq):
+	illegal = [
+		r'^DB'
+	]
+
+	for ins in ins_seq:
+		for reg in illegal:
+			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
+				return True
+
+	return False
+
 def backward_search_n(byte_seq, segment, offset, arch, n):
 	bs_len = len(byte_seq)
 	base_addr = segment.base_addr+offset
@@ -43,7 +56,7 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 	if segment.data[offset:(offset+bs_len)] != byte_seq:
 		raise Exception("expected %r == %r" % (segment.data[offset:(offset+bs_len)], byte_seq))
 
-	iseq = get_isn_seq(base_addr, byte_seq, arch)
+	iseq = get_ins_seq(base_addr, byte_seq, arch)
 	is_len = len(iseq)
 
 	if is_len < 1:
@@ -53,12 +66,22 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 
 	for i in range(1, n+1):
 		data = segment.data[(offset-i):((offset-i)+bs_len+i)]
-		new_seq = get_isn_seq(base_addr-i, data, arch)
+		new_seq = get_ins_seq(base_addr-i, data, arch)
 
 		if len(new_seq) <= is_len:
 			continue
 
 		if ins_seqs_equal(new_seq[-is_len:], iseq):
+			if len(new_seq) >= 2*is_len and \
+					ins_seqs_equal(new_seq[:is_len], iseq):
+				#if we find the same sequence preceding this one
+				#we should have already looked at that so we can stop here
+				break 
+
+			if seq_has_illegal(new_seq):
+				#log("found illegal instruction, skipping...")
+				continue
+				
 			#log("  found %r" % new_seq)
 			yield sefi_container.Gadget(
 				byte_seq, base_addr,

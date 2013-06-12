@@ -34,8 +34,8 @@ class Gadget:
 		else:
 			addr = "0x%08x"
 
-		return addr_fmt % (self.addr()) + "\n" + \
-			"\n".join(map(
+		#addr_fmt % (self.addr()) + "\n" + \
+		return "\n".join(map(
 				lambda insn: \
 					"\t" + (addr_fmt % insn[0]) + "\t" + insn[2],
 				self.disassembly()
