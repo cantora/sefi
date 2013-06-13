@@ -22,22 +22,16 @@ def search_data(segments, byte_seq, backward_search):
 					yield gadget
 
 
-def get_ins_seq(offset, data, arch):
-	return map(
-		lambda insn: insn[2],
-		distorm3.Decode(offset,	data, arch)
-	)
+def str_seq_match_regexp(str_seq, regexps):
+	for ins in str_seq:
+		for reg in regexps:
+			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
+				return True
 
-def ins_seqs_equal(a, b):
-	for (x,y) in zip(a,b):
-		if x != y:
-			return False 
+	return False
 
-	return True
-
-def seq_has_bad_ins(ins_seq, arch):
+def str_seq_has_bad_ins(str_seq, arch):
 	common = [
-		'^JMP ',
 		'^DB ',
 		'^OUTS ',
 		'^IN ',
@@ -52,48 +46,43 @@ def seq_has_bad_ins(ins_seq, arch):
 		distorm3.Decode64Bits: common
 	}
 
-	for ins in ins_seq:
-		for reg in bad_ins[arch]:
-			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
-				return True
-
-	return False
+	return str_seq_match_regexp(str_seq, bad_ins[arch])
 
 def backward_search_n(byte_seq, segment, offset, arch, n):
 	bs_len = len(byte_seq)
 	base_addr = segment.base_addr+offset
-	#t = pytrie.SortedTrie()
 	gadgets = []
 
 	if segment.data[offset:(offset+bs_len)] != byte_seq:
 		raise Exception("expected %r == %r" % (segment.data[offset:(offset+bs_len)], byte_seq))
 
-	iseq = get_ins_seq(base_addr, byte_seq, arch)
+	iseq = sefi.container.InstSeq(base_addr, byte_seq, arch)
 	is_len = len(iseq)
 
 	if is_len < 1:
 		raise Exception("invalid instruction sequence: %r" % byte_seq)
 
-	debug("backward search from 0x%08x for sequences ending in %r" % (base_addr, iseq))
+	debug("backward search from 0x%08x for sequences ending in %s" % (base_addr, iseq) )
 
 	for i in range(1, n+1):
 		data = segment.data[(offset-i):((offset-i)+bs_len+i)]
-		new_seq = get_ins_seq(base_addr-i, data, arch)
+		new_seq = sefi.container.InstSeq(base_addr-i, data, arch)
+		ns_len = len(new_seq)
 
-		if len(new_seq) <= is_len:
+		if ns_len <= is_len:
 			continue
 
-		if ins_seqs_equal(new_seq[-is_len:], iseq):
-			if len(new_seq) >= 2*is_len and \
-					ins_seqs_equal(new_seq[:is_len], iseq):
+		if iseq.same_str_seq(new_seq.str_seq()[-is_len:]):
+			if ns_len >= 2*is_len and \
+					iseq.same_str_seq(new_seq.str_seq()[:is_len]):
 				#if we find the same sequence preceding this one
 				#we should have already looked at that so we can stop here
 				break 
 
-			if seq_has_bad_ins(new_seq[:-is_len], arch):
+			#only check instructions after the prefix (i.e. RET)
+			if str_seq_has_bad_ins(new_seq.str_seq()[:-is_len], arch):
 				#debug("found bad instruction, skipping...")
 				continue
-				
 			
 			gadgets.append(
 				sefi.container.Gadget(
@@ -113,15 +102,15 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	#debug("maximal unique gadgets:")
 	#debug("gadgets: ")
 	#for g in gadgets:
-	#	debug("  %r" % g.rev_insn_seq()[plen:])
+	#	debug("  %r" % g.as_prefix()[plen:])
 	#debug("prefix: %r" % prefix)
 
 	if arr_len <= 1:
-		#debug(" => return %r" % gadgets[0].insn_seq())
+		#debug(" => return %r" % gadgets[0].str_seq())
 		return gadgets
 
 	for g in gadgets:
-		g_seq = g.rev_insn_seq()[plen:]
+		g_seq = g.as_prefix()[plen:]
 		if len(g_seq) < 1:
 			continue
 
@@ -133,7 +122,7 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 
 	result = []
 	for head, gadgets in next_pre.items():
-		#debug("head:gadgets -> %r:%r\n" % (head, map(lambda g: g.rev_insn_seq(), gadgets)) )
+		#debug("head:gadgets -> %r:%r\n" % (head, map(lambda g: g.as_prefix(), gadgets)) )
 		result += maximal_unique_gadgets(gadgets, prefix + [head])
 	
 	return result
