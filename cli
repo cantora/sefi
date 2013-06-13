@@ -78,8 +78,9 @@ def run(options):
 		
 		for gadget in result:
 			print("-"*width)
-			print("  %r" % (gadget))
-			
+			print(repr(gadget))
+			print("."*width)
+			print(gadget.blah())
 			
 	else:
 		print("raw mode not yet implemented");

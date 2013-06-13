@@ -20,11 +20,62 @@ class InstSeq(object):
 		self.data = data
 		self.arch = arch
 
+		if not isinstance(self.base_addr, int) and \
+				not isinstance(self.base_addr, long):
+			raise TypeError("invalid base_addr: %r(%s)" % (self.base_addr, type(self.base_addr)))
+		if not isinstance(self.data, str):
+			raise TypeError("invalid data: %r(%s)" % (self.data, type(self.data)))
+		if self.arch not in [distorm3.Decode32Bits, distorm3.Decode64Bits]:
+			raise TypeError("invalid arch: %r" % (self.arch))
+		
+
 	def addr(self):
 		return self.base_addr
 
 	def disassembly(self):
 		return distorm3.Decode(self.addr(), self.data, self.arch)
+
+	@staticmethod
+	def from_distorm_inst(ds_inst, arch):
+		return InstSeq(
+			ds_inst[0],
+			ds_inst[3].decode('hex'),
+			arch
+		)
+
+	def __getitem__(self, key):
+		if type(key) is int:
+			ins = self.disassembly()[key]
+			return self.__class__.from_distorm_inst(ins, self.arch)
+
+		elif type(key) is slice:
+			arr = self.disassembly()[key]
+			if len(arr) < 1:
+				raise TypeError("invalid key: %r" % key)
+			elif len(arr) < 2:
+				return self.__class__.from_distorm_inst(arr[0], self.arch)
+
+			return InstSeq(
+				arr[0][0],
+				reduce(
+					lambda x, y: x[3].decode('hex') + y[3].decode('hex'),
+					arr
+				),
+				self.arch
+			)
+
+		raise TypeError("invalid key: %r" % key)
+
+
+	def proc_equal(self, other):
+		'''is the procedure equal? that is, are the insructions the
+			same (not regarding location in memory)'''
+
+		if not isinstance(other, InstSeq):
+			raise TypeError("invalid other: %r(%s)" % (other, type(other)))
+
+		return self.same_str_seq(other.str_seq())
+
 
 	def __len__(self):
 		return len(self.disassembly())
@@ -56,10 +107,13 @@ class InstSeq(object):
 		else:
 			addr_fmt = "0x%08x"
 
-		#addr_fmt % (self.addr()) + "\n" + \
 		return "\n".join(map(
 				lambda insn: \
-					"\t" + (addr_fmt % insn[0]) + "\t" + insn[2],
+					"%4s%-16s%2s%-12s%4s%s" % (
+						"", addr_fmt % (insn[0]),
+						"", insn[3],
+						"", insn[2]
+					),
 				self.disassembly()
 			))
 
@@ -102,7 +156,10 @@ class Gadget(InstSeq):
 	def prefix(self):
 		return self.parent()
 
-	def __repr__(self):
-		return repr(self.suffix()) + \
-			"\n\t" + "_"*40 + "\n" + \
-			repr(self.prefix())
+	def blah(self):
+		return "%r\n%4s%s\n%r" % (
+			self.suffix(),
+			"", "_"*40,
+			self.prefix()
+		)
+

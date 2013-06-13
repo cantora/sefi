@@ -72,9 +72,10 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 		if ns_len <= is_len:
 			continue
 
-		if iseq.same_str_seq(new_seq.str_seq()[-is_len:]):
+		prefix = new_seq[-is_len:]
+		if iseq.proc_equal(prefix):
 			if ns_len >= 2*is_len and \
-					iseq.same_str_seq(new_seq.str_seq()[:is_len]):
+					iseq.proc_equal(new_seq[:is_len]):
 				#if we find the same sequence preceding this one
 				#we should have already looked at that so we can stop here
 				break 
@@ -84,8 +85,14 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				#debug("found bad instruction, skipping...")
 				continue
 			
+			#sometimes the prefix we are looking for can be encoded
+			#in equivalent ways. in some cases the prefix will in fact
+			#be longer than the original @byte_seq that we used to
+			#prototype it. in this case we have to correct the offset
+			#of the prefix from the base address of the gadget.
+			real_prefix_offset = i + bs_len - len(prefix.data)
 			gadgets.append(
-				sefi.container.Gadget(base_addr - i, data, arch, i)
+				sefi.container.Gadget(base_addr - i, data, arch, real_prefix_offset)
 			)
 
 	for gadget in maximal_unique_gadgets(gadgets, []):
