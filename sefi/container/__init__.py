@@ -75,15 +75,28 @@ class InstSeq(object):
 
 class Gadget(InstSeq):
 	
-	def __init__(self, parent_seq, parent_addr, addr_offset, data, arch):
-		super(Gadget, self).__init__(
-			parent_addr - addr_offset,
-			data, arch
+	def __init__(self, addr, data, arch, parent_offset):
+		super(Gadget, self).__init__(addr, data, arch)
+
+		self.parent_offset = parent_offset
+
+	
+	def suffix(self):
+		''' by "suffix" i mean the instructions preceding
+			the gadget terminator (i.e. RET). by "prefix"
+			i mean the gadget terminator sequence. '''
+
+		return InstSeq(
+			self.addr(),
+			self.data[:self.parent_offset],
+			self.arch
 		)
 
-		self.parent_seq = parent_seq
-		self.parent_addr = parent_addr
-		self.addr_offset = addr_offset
+	def parent(self):
+		return InstSeq(
+			self.addr() + self.parent_offset,
+			self.data[self.parent_offset:],
+			self.arch
+		)
 
-
-
+	

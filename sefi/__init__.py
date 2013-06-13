@@ -85,10 +85,7 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				continue
 			
 			gadgets.append(
-				sefi.container.Gadget(
-					byte_seq, base_addr,
-					i, data, arch
-				)
+				sefi.container.Gadget(base_addr - i, data, arch, i)
 			)
 
 	for gadget in maximal_unique_gadgets(gadgets, []):
