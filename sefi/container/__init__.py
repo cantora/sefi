@@ -156,7 +156,7 @@ class Gadget(InstSeq):
 	def prefix(self):
 		return self.parent()
 
-	def blah(self):
+	def __repr__(self):
 		return "%r\n%4s%s\n%r" % (
 			self.suffix(),
 			"", "_"*40,
