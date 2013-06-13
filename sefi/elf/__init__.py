@@ -8,6 +8,9 @@ from sefi.interval import IntervalSet, Interval
 from sefi.log import debug, info, warning
 import sefi.container
 
+class UnsupportedElfType(Exception):
+	pass
+
 def x_segments(elf_o):
 	''' go through elf object and find the executable segments '''
 	result = []

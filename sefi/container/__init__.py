@@ -44,7 +44,7 @@ class Gadget:
 		if self.arch == distorm3.Decode64Bits:
 			addr_fmt = "0x%016x"
 		else:
-			addr = "0x%08x"
+			addr_fmt = "0x%08x"
 
 		#addr_fmt % (self.addr()) + "\n" + \
 		return "\n".join(map(

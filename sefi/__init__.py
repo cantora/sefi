@@ -133,9 +133,17 @@ def search_elf_for_ret_gadgets(io):
 
 	elf_o = ELFFile(io)
 	info('parsed elf file with %s sections and %s segments' % (elf_o.num_sections(), elf_o.num_segments()))
-
+	if elf_o.elfclass == 64:
+		dec_size = distorm3.Decode64Bits
+		info('  elf file arch is 64 bit')
+	elif elf_o.elfclass == 32:
+		dec_size = distorm3.Decode32Bits
+		info('  elf file arch is 32 bit')
+	else:
+		raise sefi.elf.UnsupportedElfType("unknown elf class")
+	
 	backward_search = lambda seq, seg, offset: \
-		backward_search_n(seq, seg, offset, distorm3.Decode64Bits, 20)
+		backward_search_n(seq, seg, offset, dec_size, 20)
 
 	return search_data(elf_executable_data(elf_o), "\xc3", backward_search)
 
