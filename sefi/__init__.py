@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-
 import argparse
 import sys
 import os.path
 import re
 
-from sefi.log import debug
+from sefi.log import debug, info
 import sefi.container
 
 import distorm3
@@ -129,21 +127,22 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	
 	return result
 	
-def search_elf_for_ret_gadgets(io, seq):
-	backward_search = lambda seq, seg, offset: \
-		backward_search_n(seq, seg, offset, distorm3.Decode64Bits, 20)
-
-	return search_data(elf_executable_data(io), seq, backward_search)
-
-def elf_executable_data(io):
+def search_elf_for_ret_gadgets(io):
 	from elftools.elf.elffile import ELFFile
 	import sefi.elf
 
-	eo = ELFFile(io)
-	debug('parsed elf file with %s sections and %s segments' % (eo.num_sections(), eo.num_segments()))
+	elf_o = ELFFile(io)
+	info('parsed elf file with %s sections and %s segments' % (elf_o.num_sections(), elf_o.num_segments()))
 
-	xsegs = sefi.elf.x_segments(eo)
-	for segments in sefi.elf.segment_data(eo, xsegs):
+	backward_search = lambda seq, seg, offset: \
+		backward_search_n(seq, seg, offset, distorm3.Decode64Bits, 20)
+
+	return search_data(elf_executable_data(elf_o), "\xc3", backward_search)
+
+def elf_executable_data(elf_o):
+
+	xsegs = sefi.elf.x_segments(elf_o)
+	for segments in sefi.elf.segment_data(elf_o, xsegs):
 		yield segments
 
 

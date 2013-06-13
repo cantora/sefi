@@ -3,6 +3,7 @@
 import argparse
 import sys
 import os.path
+import logging
 
 import sefi
 import sefi.log
@@ -22,14 +23,15 @@ def opt_parser():
 	parser.add_argument(
 		'-v', 
 		'--verbose', 
-		action='store_true', 
-		help='print debug output.'
+		action='count', 
+		help='print debug output. repeat to increase verbosity.',
+		default=0
 	)
 
 	parser.add_argument(
 		'--raw',
 		action='store_true', 
-		help='treat the input file as raw executable bytes (by default the input is parsed as an elf executable).'
+		help='treat the input as raw executable bytes (by default the input is parsed as an elf executable).'
 	)
 
 	parser.add_argument(
@@ -47,12 +49,18 @@ class MissingOption(Exception):
 
 def run(options):
 
-	if options.verbose == True:
-		sefi.log.set_verbose()
+	lgr = logging.getLogger("sefi")
+	if options.verbose >= 2:
+		lgr.setLevel(logging.DEBUG)
+	elif options.verbose == 1:
+		lgr.setLevel(logging.INFO)
 	else:
-		sefi.log.set_quiet()
+		lgr.setLevel(logging.ERROR)
 
-	sefi.log.debug(options)
+	ch = logging.StreamHandler()
+	ch.setLevel(lgr.level)
+	lgr.addHandler(ch)
+	sefi.log.set_logger(lgr)
 
 	if not options.file:
 		#elftools needs to be able to seek
@@ -63,7 +71,7 @@ def run(options):
 		options.file = open("/tmp/sefi-stdin", "r")
 		
 	if not options.raw:
-		result = sefi.search_elf_for_ret_gadgets(options.file, chr(0xc3))
+		result = list(sefi.search_elf_for_ret_gadgets(options.file))
 		print("gadgets:")
 
 		width = 60

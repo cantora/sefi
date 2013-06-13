@@ -5,7 +5,7 @@ from elftools.construct.lib.container import Container
 
 from sefi.interval import IntervalSet, Interval
 
-from sefi.log import debug
+from sefi.log import debug, info, warning
 import sefi.container
 
 def x_segments(elf_o):
@@ -46,14 +46,14 @@ def segment_data(elf_o, xsegs):
 	count = 0
 	
 	for xs in xsegs:
-		debug('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
+		info('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
 		#cont_pp(xs, 2)
 		if xs['p_filesz'] < 1:
 			#i think this is the right thing to do with an empty segment, not sure though.
-			debug('    segment is empty on file. skip it.')
+			info('    segment is empty on file. skip it.')
 			continue
 		if xs['p_filesz'] != xs['p_memsz']:
-			print("im not sure how to handle segments that have a different size in " + \
+			warning("im not sure how to handle segments that have a different size in " + \
 					"memory than in the file; this might be bug. skipping this section")
 			continue
 
@@ -116,7 +116,7 @@ def segment_data(elf_o, xsegs):
 		count += 1
 
 	if count < 1:
-		debug('didnt find any executable data in which to search for instructions. ' + \
+		error('didnt find any executable data in which to search for instructions. ' + \
 				'if you see this message and you are sure you provided a normal ' + \
 				'elf file, then this is probably a bug.')
 		

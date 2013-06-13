@@ -1,27 +1,34 @@
-import logging
 
-log_obj = logging.getLogger()
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-log_obj.addHandler(ch)
+log_obj = None
 
-def isverbose():
-	global ch
-	return (ch.level == logging.DEBUG)
+def set_logger(logger):
+	global log_obj
+	#print "set logger to %r at level %d" % (logger, logger.level)
+	log_obj = logger
 
-def set_verbose():
-	global ch
-	ch.setLevel(logging.DEBUG)
-	
-def set_quiet():
-	global ch
-	ch.setLevel(logging.ERROR)
+def get_logger():
+	global log_obj
+	return log_obj
 
 def debug(str):
-	global ch
-	if ch.level == logging.DEBUG:
-		if hasattr(str, '__call__'):
-			str = str()
+	global log_obj
+	#print("log_obj: %r(%d)" % (log_obj, log_obj.level))
+	if log_obj:
+		return log_obj.debug(str)
+	else:
+		return None
 
-		print str
+def info(str):
+	global log_obj
+	if log_obj:
+		return log_obj.info(str)
+	else:
+		return None
+
+def warning(str):
+	global log_obj
+	if log_obj:
+		return log_obj.warning(str)
+	else:
+		return None
 
