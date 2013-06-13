@@ -59,11 +59,13 @@ class InstSeq(object):
 			return InstSeq(
 				arr[0][0],
 				reduce(
-					lambda x, y: x[3].decode('hex') + y[3].decode('hex'),
-					arr
+					lambda sum, y: sum + y[3].decode('hex'),
+					arr[1:],
+					arr[0][3].decode('hex')
 				),
 				self.arch
 			)
+
 
 		raise TypeError("invalid key: %r" % key)
 
@@ -158,7 +160,34 @@ class InstSeq(object):
 				break
 
 		return self[offset:]
-			
+		
+	def has_uncond_ctrl_flow(self):
+		regs = [
+			'^CALL ',
+			'^JMP '
+		]
+		
+		return self.match_regexp(regs)
+
+	def has_cond_ctrl_flow(self):
+		jmps = [
+			'JO', 	'JNO', 	'JS', 	'JNS', 	'JE', 	'JZ',
+			'JNE', 	'JNZ',	'JB',	'JNAE',	'JC',	'JNB',
+			'JAE',	'JNC', 	'JBE',	'JNA', 	'JA',	'JNBE',
+			'JL',	'JNGE',	'JGE',	'JNL',	'JLE',	'JNG',
+			'JG',	'JNLE',	'JP',	'JPE',	'JNP',	'JPO',
+			'JCXE',	'JECXZ'
+		]
+
+		return self.match_regexp(map( 
+			lambda j: '^%s ' % j,
+			jmps
+		))
+
+	def has_ctrl_flow(self):
+		return self.has_cond_ctrl_flow() or \
+				self.has_uncond_ctrl_flow()
+
 
 class Gadget(InstSeq):
 	
