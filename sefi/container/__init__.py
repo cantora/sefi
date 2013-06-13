@@ -110,10 +110,10 @@ class InstSeq(object):
 
 		return "\n".join(map(
 				lambda insn: \
-					"%4s%-16s%2s%-12s%4s%s" % (
+					"%4s%-16s%2s%-16s%s" % (
 						"", addr_fmt % (insn[0]),
 						"", insn[3],
-						"", insn[2]
+						insn[2]
 					),
 				self.disassembly()
 			))
