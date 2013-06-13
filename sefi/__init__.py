@@ -131,7 +131,7 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	
 	return result
 	
-def search_elf_for_ret_gadgets(io):
+def search_elf_for_ret_gadgets(io, backward_search_amt):
 	from elftools.elf.elffile import ELFFile
 	import sefi.elf
 
@@ -147,7 +147,7 @@ def search_elf_for_ret_gadgets(io):
 		raise sefi.elf.UnsupportedElfType("unknown elf class")
 	
 	backward_search = lambda seq, seg, offset: \
-		backward_search_n(seq, seg, offset, dec_size, 20)
+		backward_search_n(seq, seg, offset, dec_size, backward_search_amt)
 
 	return search_data(elf_executable_data(elf_o), "\xc3", backward_search)
 

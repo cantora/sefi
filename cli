@@ -29,17 +29,22 @@ def opt_parser():
 	)
 
 	parser.add_argument(
+		'-n',
+		'--n',
+		metavar='N',
+		type=int,
+		help='search backwards from gadget terminator for N bytes. default: 20',
+		default=20
+	)
+
+	
+	parser.add_argument(
 		'--raw',
 		action='store_true', 
 		help='treat the input as raw executable bytes (by default the input is parsed as an elf executable).'
 	)
 
-	parser.add_argument(
-		'--nx', 
-		action='store_true', 
-		help='look for instructions in non-executable segments. ignored when --raw is used.'
-	)
-
+	
 	return parser
 
 
@@ -48,7 +53,7 @@ class MissingOption(Exception):
 
 
 def run(options):
-
+	
 	lgr = logging.getLogger("sefi")
 	if options.verbose >= 2:
 		lgr.setLevel(logging.DEBUG)
@@ -71,7 +76,7 @@ def run(options):
 		options.file = open("/tmp/sefi-stdin", "r")
 		
 	if not options.raw:
-		result = list(sefi.search_elf_for_ret_gadgets(options.file))
+		result = list(sefi.search_elf_for_ret_gadgets(options.file, options.n))
 		print("gadgets:")
 
 		width = 60
