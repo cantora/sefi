@@ -10,6 +10,7 @@ import sefi_log
 import sefi_container
 
 import distorm3
+import pytrie
 
 def search_data(segments, byte_seq, backward_search):
 	bs_len = len(byte_seq)
@@ -37,13 +38,14 @@ def ins_seqs_equal(a, b):
 
 	return True
 
-def seq_has_illegal(ins_seq):
-	illegal = [
-		r'^DB'
+def seq_has_bad_ins(ins_seq):
+	bad_ins = [
+		'^DB',
+		'^CALL 0x'
 	]
 
 	for ins in ins_seq:
-		for reg in illegal:
+		for reg in bad_ins:
 			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
 				return True
 
@@ -52,6 +54,8 @@ def seq_has_illegal(ins_seq):
 def backward_search_n(byte_seq, segment, offset, arch, n):
 	bs_len = len(byte_seq)
 	base_addr = segment.base_addr+offset
+	#t = pytrie.SortedTrie()
+	gadgets = []
 
 	if segment.data[offset:(offset+bs_len)] != byte_seq:
 		raise Exception("expected %r == %r" % (segment.data[offset:(offset+bs_len)], byte_seq))
@@ -78,16 +82,54 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				#we should have already looked at that so we can stop here
 				break 
 
-			if seq_has_illegal(new_seq):
-				#log("found illegal instruction, skipping...")
+			if seq_has_bad_ins(new_seq):
+				#log("found bad instruction, skipping...")
 				continue
 				
-			#log("  found %r" % new_seq)
-			yield sefi_container.Gadget(
-				byte_seq, base_addr,
-				i, data, arch
+			
+			gadgets.append(
+				sefi_container.Gadget(
+					byte_seq, base_addr,
+					i, data, arch
+				)
 			)
 
+	for gadget in maximal_unique_gadgets(gadgets, []):
+		yield gadget
+
+def maximal_unique_gadgets(gadgets, prefix = []):
+	next_pre = {}
+	arr_len = len(gadgets)
+	plen = len(prefix)
+
+	#log("maximal unique gadgets:")
+	#log("gadgets: ")
+	#for g in gadgets:
+	#	log("  %r" % g.rev_insn_seq()[plen:])
+	#log("prefix: %r" % prefix)
+
+	if arr_len <= 1:
+		#log(" => return %r" % gadgets[0].insn_seq())
+		return gadgets
+
+	for g in gadgets:
+		g_seq = g.rev_insn_seq()[plen:]
+		if len(g_seq) < 1:
+			continue
+
+		head, tail = g_seq[0], g_seq[1:]
+		if head not in next_pre:
+			next_pre[head] = [g]
+		else:
+			next_pre[head].append(g)
+
+	result = []
+	for head, gadgets in next_pre.items():
+		#log("head:gadgets -> %r:%r\n" % (head, map(lambda g: g.rev_insn_seq(), gadgets)) )
+		result += maximal_unique_gadgets(gadgets, prefix + [head])
+	
+	return result
+	
 def search_elf_for_ret_gadgets(io, seq):
 	backward_search = lambda seq, seg, offset: \
 		backward_search_n(seq, seg, offset, distorm3.Decode64Bits, 20)

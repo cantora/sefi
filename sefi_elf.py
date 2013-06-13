@@ -46,7 +46,7 @@ def segment_data(elf_o, xsegs):
 	
 	for xs in xsegs:
 		log('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
-		cont_pp(xs, 2)
+		#cont_pp(xs, 2)
 		if xs['p_filesz'] < 1:
 			#i think this is the right thing to do with an empty segment, not sure though.
 			log('    segment is empty on file. skip it.')

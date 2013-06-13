@@ -67,8 +67,12 @@ def run(options):
 		result = sefi.search_elf_for_ret_gadgets(options.file, chr(0xc3))
 		print("gadgets:")
 
+		width = 60
+		
 		for gadget in result:
-			print("  %r\n" % (gadget))
+			print("-"*width)
+			print("  %r" % (gadget))
+			
 			
 	else:
 		print("raw mode not yet implemented");

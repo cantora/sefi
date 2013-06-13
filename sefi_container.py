@@ -28,6 +28,18 @@ class Gadget:
 	def disassembly(self):
 		return distorm3.Decode(self.addr(), self.data, self.arch)
 
+	def insn_seq(self):
+		return map(
+			lambda insn: insn[2],
+			self.disassembly()
+		)
+
+	def rev_insn_seq(self):
+		return map(
+			lambda insn: insn[2],
+			reversed(self.disassembly())
+		)
+
 	def __repr__(self):
 		if self.arch == distorm3.Decode64Bits:
 			addr_fmt = "0x%016x"
