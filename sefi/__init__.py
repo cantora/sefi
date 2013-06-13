@@ -42,7 +42,9 @@ def seq_has_bad_ins(ins_seq, arch):
 		'^OUTS ',
 		'^IN ',
 		'^INS ',
-		'^HLT '
+		'^HLT$',
+		'^RET ',
+		'^RET$'
 	]
 
 	bad_ins = {
@@ -88,7 +90,7 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				#we should have already looked at that so we can stop here
 				break 
 
-			if seq_has_bad_ins(new_seq, arch):
+			if seq_has_bad_ins(new_seq[:-is_len], arch):
 				#debug("found bad instruction, skipping...")
 				continue
 				
