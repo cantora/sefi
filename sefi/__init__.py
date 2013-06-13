@@ -22,32 +22,6 @@ def search_data(segments, byte_seq, backward_search):
 					yield gadget
 
 
-def str_seq_match_regexp(str_seq, regexps):
-	for ins in str_seq:
-		for reg in regexps:
-			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
-				return True
-
-	return False
-
-def str_seq_has_bad_ins(str_seq, arch):
-	common = [
-		'^DB ',
-		'^OUTS ',
-		'^IN ',
-		'^INS ',
-		'^HLT$',
-		'^RET ',
-		'^RET$'
-	]
-
-	bad_ins = {
-		distorm3.Decode32Bits: common,
-		distorm3.Decode64Bits: common
-	}
-
-	return str_seq_match_regexp(str_seq, bad_ins[arch])
-
 def backward_search_n(byte_seq, segment, offset, arch, n):
 	bs_len = len(byte_seq)
 	base_addr = segment.base_addr+offset
@@ -80,20 +54,19 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				#we should have already looked at that so we can stop here
 				break 
 
-			#only check instructions after the prefix (i.e. RET)
-			if str_seq_has_bad_ins(new_seq.str_seq()[:-is_len], arch):
-				#debug("found bad instruction, skipping...")
-				continue
-			
 			#sometimes the prefix we are looking for can be encoded
 			#in equivalent ways. in some cases the prefix will in fact
 			#be longer than the original @byte_seq that we used to
 			#prototype it. in this case we have to correct the offset
 			#of the prefix from the base address of the gadget.
 			real_prefix_offset = i + bs_len - len(prefix.data)
-			gadgets.append(
-				sefi.container.Gadget(base_addr - i, data, arch, real_prefix_offset)
-			)
+			g = sefi.container.Gadget(base_addr - i, data, arch, real_prefix_offset)
+
+			if g.has_bad_ins():
+				#debug("found bad instruction, skipping...")
+				continue
+			
+			gadgets.append(g)
 
 	for gadget in maximal_unique_gadgets(gadgets, []):
 		yield gadget

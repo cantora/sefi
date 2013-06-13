@@ -1,5 +1,6 @@
 
 import distorm3
+import re
 
 class Segment(object):
 	'''
@@ -127,6 +128,15 @@ class InstSeq(object):
 	
 		return True
 
+	def match_regexp(self, regexps):
+		for ins in self.str_seq():
+			for reg in regexps:
+				if re.search(reg, ins, flags = re.IGNORECASE) is not None:
+					return True
+	
+		return False
+	
+
 class Gadget(InstSeq):
 	
 	def __init__(self, addr, data, arch, parent_offset):
@@ -162,4 +172,23 @@ class Gadget(InstSeq):
 			"", "_"*40,
 			self.prefix()
 		)
+
+	def has_bad_ins(self):
+		common = [
+			'^DB ',
+			'^OUTS ',
+			'^IN ',
+			'^INS ',
+			'^HLT$',
+			'^RET ',
+			'^RET$'
+		]
+	
+		bad_ins = {
+			distorm3.Decode32Bits: common,
+			distorm3.Decode64Bits: common
+		}
+
+		#only check instructions after the prefix (i.e. RET)
+		return self.suffix().match_regexp(bad_ins[self.arch])
 
