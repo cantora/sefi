@@ -35,14 +35,23 @@ def ins_seqs_equal(a, b):
 
 	return True
 
-def seq_has_bad_ins(ins_seq):
-	bad_ins = [
-		'^DB',
-		'^CALL 0x'
+def seq_has_bad_ins(ins_seq, arch):
+	common = [
+		'^JMP ',
+		'^DB ',
+		'^OUTS ',
+		'^IN ',
+		'^INS ',
+		'^HLT '
 	]
 
+	bad_ins = {
+		distorm3.Decode32Bits: common,
+		distorm3.Decode64Bits: common
+	}
+
 	for ins in ins_seq:
-		for reg in bad_ins:
+		for reg in bad_ins[arch]:
 			if re.search(reg, ins, flags = re.IGNORECASE) is not None:
 				return True
 
@@ -79,7 +88,7 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				#we should have already looked at that so we can stop here
 				break 
 
-			if seq_has_bad_ins(new_seq):
+			if seq_has_bad_ins(new_seq, arch):
 				#debug("found bad instruction, skipping...")
 				continue
 				
