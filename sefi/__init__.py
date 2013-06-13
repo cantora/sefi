@@ -65,8 +65,12 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 			if g.has_bad_ins():
 				#debug("found bad instruction, skipping...")
 				continue
-			
-			gadgets.append(g)
+
+			cg = g.compact()
+			if cg is not None:
+				gadgets.append(cg)
+			else:
+				debug("compacted gadget was empty: \n%r" % g)
 
 	for gadget in maximal_unique_gadgets(gadgets, []):
 		yield gadget

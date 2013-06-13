@@ -135,7 +135,30 @@ class InstSeq(object):
 					return True
 	
 		return False
-	
+
+	@staticmethod
+	def match_nop(ds_inst):
+		if re.search('^NOP( |$)', ds_inst, flags = re.IGNORECASE) is None:
+			return False
+
+		return True
+
+	def nop(self):
+		'''is this a sequence of nops?'''
+		for ins in self.str_seq():
+			if not self.__class__.match_nop(ins):
+				return False
+
+		return True
+
+	def without_nop_prefix(self):
+		str_seq = self.str_seq()
+		for offset in range(0, len(str_seq)):
+			if not self.__class__.match_nop(str_seq[offset]):
+				break
+
+		return self[offset:]
+			
 
 class Gadget(InstSeq):
 	
@@ -144,7 +167,26 @@ class Gadget(InstSeq):
 
 		self.parent_offset = parent_offset
 
-	
+	def nop(self):
+		return self.suffix().nop()
+
+	def compact(self):
+		'''remove unnecessary prefix instructions'''
+		if self.nop():
+			return None
+		
+		suf = self.suffix()
+		if self.__class__.match_nop(suf.str_seq()[0]):
+			suf = suf.without_nop_prefix()
+			return Gadget(
+				suf[0].addr(),
+				suf.data + self.prefix().data,
+				self.arch,
+				len(suf.data)
+			)
+		else:
+			return self
+		
 	def suffix(self):
 		''' by "suffix" i mean the instructions preceding
 			the gadget terminator (i.e. RET). by "prefix"
