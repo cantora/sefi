@@ -99,4 +99,10 @@ class Gadget(InstSeq):
 			self.arch
 		)
 
-	
+	def prefix(self):
+		return self.parent()
+
+	def __repr__(self):
+		return repr(self.suffix()) + \
+			"\n\t" + "_"*40 + "\n" + \
+			repr(self.prefix())
