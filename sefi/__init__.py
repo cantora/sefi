@@ -5,9 +5,8 @@ import sys
 import os.path
 import re
 
-from sefi_log import log
-import sefi_log
-import sefi_container
+from sefi.log import debug
+import sefi.container
 
 import distorm3
 import pytrie
@@ -16,7 +15,7 @@ def search_data(segments, byte_seq, backward_search):
 	bs_len = len(byte_seq)
 
 	for segment in segments:
-		log('search %d bytes starting at 0x%08x' % (len(segment.data), segment.base_addr))
+		debug('search %d bytes starting at 0x%08x' % (len(segment.data), segment.base_addr))
 
 		for i in range(0, len(segment.data)):
 			buffer = segment.data[i:(i+bs_len)]
@@ -66,7 +65,7 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 	if is_len < 1:
 		raise Exception("invalid instruction sequence: %r" % byte_seq)
 
-	log("backward search from 0x%08x for sequences ending in %r" % (base_addr, iseq))
+	debug("backward search from 0x%08x for sequences ending in %r" % (base_addr, iseq))
 
 	for i in range(1, n+1):
 		data = segment.data[(offset-i):((offset-i)+bs_len+i)]
@@ -83,12 +82,12 @@ def backward_search_n(byte_seq, segment, offset, arch, n):
 				break 
 
 			if seq_has_bad_ins(new_seq):
-				#log("found bad instruction, skipping...")
+				#debug("found bad instruction, skipping...")
 				continue
 				
 			
 			gadgets.append(
-				sefi_container.Gadget(
+				sefi.container.Gadget(
 					byte_seq, base_addr,
 					i, data, arch
 				)
@@ -102,14 +101,14 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	arr_len = len(gadgets)
 	plen = len(prefix)
 
-	#log("maximal unique gadgets:")
-	#log("gadgets: ")
+	#debug("maximal unique gadgets:")
+	#debug("gadgets: ")
 	#for g in gadgets:
-	#	log("  %r" % g.rev_insn_seq()[plen:])
-	#log("prefix: %r" % prefix)
+	#	debug("  %r" % g.rev_insn_seq()[plen:])
+	#debug("prefix: %r" % prefix)
 
 	if arr_len <= 1:
-		#log(" => return %r" % gadgets[0].insn_seq())
+		#debug(" => return %r" % gadgets[0].insn_seq())
 		return gadgets
 
 	for g in gadgets:
@@ -125,7 +124,7 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 
 	result = []
 	for head, gadgets in next_pre.items():
-		#log("head:gadgets -> %r:%r\n" % (head, map(lambda g: g.rev_insn_seq(), gadgets)) )
+		#debug("head:gadgets -> %r:%r\n" % (head, map(lambda g: g.rev_insn_seq(), gadgets)) )
 		result += maximal_unique_gadgets(gadgets, prefix + [head])
 	
 	return result
@@ -138,14 +137,14 @@ def search_elf_for_ret_gadgets(io, seq):
 
 def elf_executable_data(io):
 	from elftools.elf.elffile import ELFFile
-	import sefi_elf
+	import sefi.elf
 
 	eo = ELFFile(io)
-	log('parsed elf file with %s sections and %s segments' % (eo.num_sections(), eo.num_segments()))
+	debug('parsed elf file with %s sections and %s segments' % (eo.num_sections(), eo.num_segments()))
 
-	xsegs = sefi_elf.x_segments(eo)
-	for segments in sefi_elf.segment_data(eo, xsegs):
+	xsegs = sefi.elf.x_segments(eo)
+	for segments in sefi.elf.segment_data(eo, xsegs):
 		yield segments
 
-			
+
 	

@@ -17,7 +17,7 @@ def set_quiet():
 	global ch
 	ch.setLevel(logging.ERROR)
 
-def log(str):
+def debug(str):
 	global ch
 	if ch.level == logging.DEBUG:
 		if hasattr(str, '__call__'):

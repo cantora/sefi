@@ -4,9 +4,8 @@ import argparse
 import sys
 import os.path
 
-from sefi_log import log
-import sefi_log
 import sefi
+import sefi.log
 
 def opt_parser():
 
@@ -49,11 +48,11 @@ class MissingOption(Exception):
 def run(options):
 
 	if options.verbose == True:
-		sefi_log.set_verbose()
+		sefi.log.set_verbose()
 	else:
-		sefi_log.set_quiet()
+		sefi.log.set_quiet()
 
-	log(options)
+	sefi.log.debug(options)
 
 	if not options.file:
 		#elftools needs to be able to seek

@@ -2,10 +2,11 @@ import sys
 
 from elftools.elf.constants import P_FLAGS
 from elftools.construct.lib.container import Container
-from interval import IntervalSet, Interval
 
-from sefi_log import log
-import sefi_container
+from sefi.interval import IntervalSet, Interval
+
+from sefi.log import debug
+import sefi.container
 
 def x_segments(elf_o):
 	''' go through elf object and find the executable segments '''
@@ -45,11 +46,11 @@ def segment_data(elf_o, xsegs):
 	count = 0
 	
 	for xs in xsegs:
-		log('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
+		debug('  %s(0x%x..0x%x)' % (xs['p_type'], xs['p_vaddr'], xs['p_vaddr']+xs['p_memsz']))
 		#cont_pp(xs, 2)
 		if xs['p_filesz'] < 1:
 			#i think this is the right thing to do with an empty segment, not sure though.
-			log('    segment is empty on file. skip it.')
+			debug('    segment is empty on file. skip it.')
 			continue
 		if xs['p_filesz'] != xs['p_memsz']:
 			print("im not sure how to handle segments that have a different size in " + \
@@ -66,11 +67,11 @@ def segment_data(elf_o, xsegs):
 		else:
 			i_set = i_set | ivl
 
-	log('executable data interval %r' % i_set)
+	debug('executable data interval %r' % i_set)
 	sorted_xsegs = sorted(xsegs, key=lambda seg: seg['p_vaddr'])
 
 	for ivl in i_set:
-		log(repr(ivl))
+		debug(repr(ivl))
 		ivl_sz = (ivl.upper_bound-1 - ivl.lower_bound)
 
 		if ivl.__class__.__name__ != "Interval":
@@ -101,7 +102,7 @@ def segment_data(elf_o, xsegs):
 				else:
 					bdata = tmp
 			
-			log('bdata is %d bytes' % len(bdata))
+			debug('bdata is %d bytes' % len(bdata))
 				
 		if len(bdata) != ivl_sz:
 			raise Exception(
@@ -111,11 +112,11 @@ def segment_data(elf_o, xsegs):
 				)
 			)
 		
-		yield sefi_container.Segment(bdata, ivl.lower_bound)
+		yield sefi.container.Segment(bdata, ivl.lower_bound)
 		count += 1
 
 	if count < 1:
-		log('didnt find any executable data in which to search for instructions. ' + \
+		debug('didnt find any executable data in which to search for instructions. ' + \
 				'if you see this message and you are sure you provided a normal ' + \
 				'elf file, then this is probably a bug.')
 		
