@@ -133,6 +133,7 @@ def run_elf(options):
 		result += list(sefi.search_elf_for_ret_gadgets(options.file, options.n))
 	
 	if options.jmp_reg: 
+		#result += list(sefi.search_elf_for_jmp_reg_gadgets(options.file, options.n))
 		raise NotImplemented("jmp reg gadget search not implemented")
 
 	if options.call_reg:

@@ -9,7 +9,10 @@ import sefi.container
 import distorm3
 import pytrie
 
-def search_data(segments, byte_seq, backward_search):
+class UnsupportedArch(Exception):
+	pass
+
+def search_data_for_byte_seq(segments, byte_seq, backward_search):
 	bs_len = len(byte_seq)
 
 	for segment in segments:
@@ -21,25 +24,46 @@ def search_data(segments, byte_seq, backward_search):
 				for gadget in backward_search(byte_seq, segment, i):
 					yield gadget
 
+def search_data(segments, regexp, arch, backward_search):
 
-def backward_search_n(byte_seq, segment, offset, arch, n):
-	bs_len = len(byte_seq)
+	for segment in segments:
+		debug('search %d bytes starting at 0x%08x' % (len(segment.data), segment.base_addr))
+
+		for i in range(0, len(segment.data)):
+			iseq = sefi.container.InstSeq(
+				segment.base_addr+i,
+				segment.data[i:(i+32)], #ive heard maximum x86 len is 15, but im not sure
+				arch
+			)
+			match = re.search(regexp, iseq.str_seq()[0], flags = re.IGNORECASE)
+
+			if match is not None:
+				for gadget in backward_search(iseq[0], segment, i):
+					yield gadget
+
+def backward_search_n_from_byte_seq(byte_seq, segment, offset, arch, n):
+	return backward_search_n(
+		sefi.container.InstSeq(
+			segment.base_addr+offset,
+			byte_seq, 
+			arch
+		),
+		segment, offset, arch, n
+	)
+
+def backward_search_n(iseq, segment, offset, arch, n):
+	bs_len = len(iseq.data)
 	base_addr = segment.base_addr+offset
 	gadgets = []
-
-	if segment.data[offset:(offset+bs_len)] != byte_seq:
-		raise Exception("expected %r == %r" % (segment.data[offset:(offset+bs_len)], byte_seq))
-
-	iseq = sefi.container.InstSeq(base_addr, byte_seq, arch)
 	is_len = len(iseq)
 
 	if is_len < 1:
-		raise Exception("invalid instruction sequence: %r" % byte_seq)
+		raise Exception("invalid instruction sequence: %r" % iseq)
 
 	debug("backward search from 0x%08x for sequences ending in %s" % (base_addr, iseq) )
 
 	for i in range(1, n+1):
-		data = segment.data[(offset-i):((offset-i)+bs_len+i)]
+		data = segment.data[(offset-i):(offset+bs_len)]
 		new_seq = sefi.container.InstSeq(base_addr-i, data, arch)
 		ns_len = len(new_seq)
 
@@ -108,28 +132,34 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	
 	return result
 
-def search_elf_for_gadgets(io, backward_search_amt, byte_seq):
+def search_elf_for_gadgets(io, backward_search_amt, regexp):
 	from elftools.elf.elffile import ELFFile
 	import sefi.elf
 
 	elf_o = ELFFile(io)
-	info('parsed elf file with %s sections and %s segments' % (elf_o.num_sections(), elf_o.num_segments()))
-	if elf_o.elfclass == 64:
+	info('parsed elf file with %s sections and %s segments' % 
+		(elf_o.num_sections(), elf_o.num_segments())
+	)
+	arch = elf_o.get_machine_arch()
+	if arch == "x64":
 		dec_size = distorm3.Decode64Bits
-		info('  elf file arch is 64 bit')
-	elif elf_o.elfclass == 32:
+		info('  elf file arch is x86-64')
+	elif arch == "x86":
 		dec_size = distorm3.Decode32Bits
-		info('  elf file arch is 32 bit')
+		info('  elf file arch is x86')
 	else:
-		raise sefi.elf.UnsupportedElfType("unknown elf class")
+		raise UnsupportedArch("unsupported architecture: %r" % arch)
 	
 	backward_search = lambda seq, seg, offset: \
 		backward_search_n(seq, seg, offset, dec_size, backward_search_amt)
 
-	return search_data(elf_executable_data(elf_o), byte_seq, backward_search)
+	return search_data(elf_executable_data(elf_o), regexp, dec_size, backward_search)
 	
 def search_elf_for_ret_gadgets(io, backward_search_amt):
-	return search_elf_for_gadgets(io, backward_search_amt, "\xc3")
+	return search_elf_for_gadgets(io, backward_search_amt, "^RET( |$)")
+
+#def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
+#	return search_elf_for_gadgets(io, backward_search_amt, "\xc3")
 
 def elf_executable_data(elf_o):
 
