@@ -136,7 +136,7 @@ def run_elf(options):
 		result += list(sefi.search_elf_for_jmp_reg_gadgets(options.file, options.n))
 
 	if options.call_reg:
-		raise NotImplemented("call reg gadget search not implemented")
+		result += list(sefi.search_elf_for_call_reg_gadgets(options.file, options.n))
 
 	if len(options.gadget) > 0:
 		raise NotImplemented("custom gadget search not implemented")

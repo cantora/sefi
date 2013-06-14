@@ -145,7 +145,7 @@ class InstSeq(object):
 
 	@staticmethod
 	def match_nop(ds_inst):
-		if re.search('^NOP( |$)', ds_inst, flags = re.IGNORECASE) is None:
+		if re.search(sefi.mnemonic.NOP_ALL, ds_inst, flags = re.IGNORECASE) is None:
 			return False
 
 		return True

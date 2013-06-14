@@ -171,6 +171,12 @@ def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
 		sefi.mnemonic.JMP_REG_UNCOND
 	)
 
+def search_elf_for_call_reg_gadgets(io, backward_search_amt):
+	return search_elf_for_gadgets(
+		io, backward_search_amt, 
+		sefi.mnemonic.CALL_REG_ALL
+	)
+
 def elf_executable_data(elf_o):
 
 	xsegs = sefi.elf.x_segments(elf_o)

@@ -23,3 +23,8 @@ JMP_REG_FMT = "^(%%s) .*(%s).*" % (
 JMP_REG_ALL = JMP_REG_FMT % ("|".join(JMP_NAMES))
 JMP_REG_UNCOND = JMP_REG_FMT % ('JMP')
 
+CALL_REG_ALL = "^CALL .*(%s).*" % (
+	"|".join(REGISTER_NAMES)
+)
+
+NOP_ALL = '(?:NOP(?: |$))|(?:^MOV (.+),\s*(\\1)\s*)'
