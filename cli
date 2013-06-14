@@ -40,9 +40,9 @@ def opt_parser():
 	parser.add_argument(
 		'-g',
 		'--gadget',
-		metavar='BYTES',
+		metavar='REGEXP',
 		action='append',
-		help='search for gadgets ending in BYTES.',
+		help='search for gadgets ending in an instruction that matches REGEXP.',
 		default=[]
 	)
 
@@ -139,7 +139,11 @@ def run_elf(options):
 		result += list(sefi.search_elf_for_call_reg_gadgets(options.file, options.n))
 
 	if len(options.gadget) > 0:
-		raise NotImplemented("custom gadget search not implemented")
+		for reg in options.gadget:
+			sefi.log.info("search for gadgets matching %r" % reg)
+			result += list(sefi.search_elf_for_gadgets(
+				options.file, options.n, reg
+			))
 
 	cond_flow = []
 	uncond_flow = []
