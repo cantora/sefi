@@ -105,21 +105,25 @@ class InstSeq(object):
 	def __str__(self):
 		return repr(list(self.str_seq()))
 
-	def __repr__(self):
-		if self.arch == distorm3.Decode64Bits:
-			addr_fmt = "0x%016x"
+	@staticmethod
+	def distorm_inst_repr(insn, arch):
+		if arch == distorm3.Decode64Bits:
+			addr_fmt = "%016x"
 		else:
-			addr_fmt = "0x%08x"
+			addr_fmt = "%08x"
+
+		return "%4s%-16s%2s%-16s%s" % (
+			"", addr_fmt % (insn[0]),
+			"", insn[3],
+			insn[2]
+		)
+
+	def __repr__(self):
 
 		return "\n".join(map(
-				lambda insn: \
-					"%4s%-16s%2s%-16s%s" % (
-						"", addr_fmt % (insn[0]),
-						"", insn[3],
-						insn[2]
-					),
-				self.disassembly()
-			))
+			lambda insn: self.__class__.distorm_inst_repr(insn, self.arch),
+			self.disassembly()
+		))
 
 	def same_str_seq(self, str_seq):
 		''' tests whether @str_seq is the same as the
