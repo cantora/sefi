@@ -5,6 +5,7 @@ import re
 
 from sefi.log import debug, info
 import sefi.container
+import sefi.mnemonic
 
 import distorm3
 import pytrie
@@ -156,7 +157,10 @@ def search_elf_for_gadgets(io, backward_search_amt, regexp):
 	return search_data(elf_executable_data(elf_o), regexp, dec_size, backward_search)
 	
 def search_elf_for_ret_gadgets(io, backward_search_amt):
-	return search_elf_for_gadgets(io, backward_search_amt, "^RET( |$)")
+	return search_elf_for_gadgets(
+		io, backward_search_amt, 
+		sefi.mnemonic.RET_ALL
+	)
 
 #def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
 #	return search_elf_for_gadgets(io, backward_search_amt, "\xc3")

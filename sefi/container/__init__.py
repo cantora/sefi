@@ -1,3 +1,4 @@
+import sefi.mnemonic
 
 import distorm3
 import re
@@ -170,18 +171,10 @@ class InstSeq(object):
 		return self.match_regexp(regs)
 
 	def has_cond_ctrl_flow(self):
-		jmps = [
-			'JO', 	'JNO', 	'JS', 	'JNS', 	'JE', 	'JZ',
-			'JNE', 	'JNZ',	'JB',	'JNAE',	'JC',	'JNB',
-			'JAE',	'JNC', 	'JBE',	'JNA', 	'JA',	'JNBE',
-			'JL',	'JNGE',	'JGE',	'JNL',	'JLE',	'JNG',
-			'JG',	'JNLE',	'JP',	'JPE',	'JNP',	'JPO',
-			'JCXE',	'JECXZ'
-		]
 
 		return self.match_regexp(map( 
 			lambda j: '^%s ' % j,
-			jmps
+			sefi.mnemonic.JMP_NAMES
 		))
 
 	def has_ctrl_flow(self):
@@ -251,8 +244,7 @@ class Gadget(InstSeq):
 			'^IN ',
 			'^INS ',
 			'^HLT$',
-			'^RET ',
-			'^RET$'
+			sefi.mnemonic.RET_ALL
 		]
 	
 		bad_ins = {
