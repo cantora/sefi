@@ -112,10 +112,21 @@ class InstSeq(object):
 		else:
 			addr_fmt = "%08x"
 
-		return "%4s%-16s%2s%-16s%s" % (
+		#[RIP+0x201ac2]
+		m = re.search(
+			"\[\s*(?:EIP|RIP)\s*\+\s*0x([0-9a-zA-Z]+)\s*\]",
+			insn[2],
+			re.IGNORECASE
+		)
+		if m is not None:
+			comment = (" ; 0x"+addr_fmt) % (insn[0] + int(m.group(1), 16))
+		else:
+			comment = ""
+
+		return "%4s%-16s%2s%-16s%s%s" % (
 			"", addr_fmt % (insn[0]),
 			"", insn[3],
-			insn[2]
+			insn[2], comment
 		)
 
 	def __repr__(self):
