@@ -132,10 +132,10 @@ def run_elf(options):
 	if options.ret or options.all:
 		result += list(sefi.search_elf_for_ret_gadgets(options.file, options.n))
 	
-	if options.jmp_reg: 
+	if options.jmp_reg or options.all: 
 		result += list(sefi.search_elf_for_jmp_reg_gadgets(options.file, options.n))
 
-	if options.call_reg:
+	if options.call_reg or options.all:
 		result += list(sefi.search_elf_for_call_reg_gadgets(options.file, options.n))
 
 	if len(options.gadget) > 0:
