@@ -39,7 +39,7 @@ def search_data(segments, regexp, arch, backward_search):
 			match = re.search(regexp, iseq.str_seq()[0], flags = re.IGNORECASE)
 
 			if match is not None:
-				for gadget in backward_search(iseq[0], segment, i):
+				for gadget in backward_search(iseq[0], regexp, segment, i):
 					yield gadget
 
 def backward_search_n_from_byte_seq(byte_seq, segment, offset, arch, n):
@@ -49,10 +49,10 @@ def backward_search_n_from_byte_seq(byte_seq, segment, offset, arch, n):
 			byte_seq, 
 			arch
 		),
-		segment, offset, arch, n
+		None, segment, offset, arch, n
 	)
 
-def backward_search_n(iseq, segment, offset, arch, n):
+def backward_search_n(iseq, regexp, segment, offset, arch, n):
 	bs_len = len(iseq.data)
 	base_addr = segment.base_addr+offset
 	gadgets = []
@@ -73,11 +73,14 @@ def backward_search_n(iseq, segment, offset, arch, n):
 
 		prefix = new_seq[-is_len:]
 		if iseq.proc_equal(prefix):
-			if ns_len >= 2*is_len and \
-					iseq.proc_equal(new_seq[:is_len]):
+			if ns_len >= 2*is_len:
+				subseq = new_seq[:is_len]
 				#if we find the same sequence preceding this one
 				#we should have already looked at that so we can stop here
-				break 
+				if iseq.proc_equal(subseq):
+					break 
+				if regexp and subseq.match_regexp([regexp]):
+					break
 
 			#sometimes the prefix we are looking for can be encoded
 			#in equivalent ways. in some cases the prefix will in fact
@@ -151,8 +154,8 @@ def search_elf_for_gadgets(io, backward_search_amt, regexp):
 	else:
 		raise UnsupportedArch("unsupported architecture: %r" % arch)
 	
-	backward_search = lambda seq, seg, offset: \
-		backward_search_n(seq, seg, offset, dec_size, backward_search_amt)
+	backward_search = lambda seq, regexp, seg, offset: \
+		backward_search_n(seq, regexp, seg, offset, dec_size, backward_search_amt)
 
 	return search_data(elf_executable_data(elf_o), regexp, dec_size, backward_search)
 	
@@ -162,8 +165,11 @@ def search_elf_for_ret_gadgets(io, backward_search_amt):
 		sefi.mnemonic.RET_ALL
 	)
 
-#def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
-#	return search_elf_for_gadgets(io, backward_search_amt, "\xc3")
+def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
+	return search_elf_for_gadgets(
+		io, backward_search_amt, 
+		sefi.mnemonic.JMP_REG_UNCOND
+	)
 
 def elf_executable_data(elf_o):
 

@@ -132,8 +132,12 @@ class InstSeq(object):
 		return True
 
 	def match_regexp(self, regexps):
+		if not isinstance(regexps, list):
+			raise TypeError("invalid regexps: %r" % regexps)
+
 		for ins in self.str_seq():
 			for reg in regexps:
+				#print "match %r against %r" % (reg, ins)
 				if re.search(reg, ins, flags = re.IGNORECASE) is not None:
 					return True
 	
@@ -174,7 +178,7 @@ class InstSeq(object):
 
 		return self.match_regexp(map( 
 			lambda j: '^%s ' % j,
-			sefi.mnemonic.JMP_NAMES
+			filter(lambda str: str != 'JMP', sefi.mnemonic.JMP_NAMES)
 		))
 
 	def has_ctrl_flow(self):
@@ -255,3 +259,8 @@ class Gadget(InstSeq):
 		#only check instructions after the prefix (i.e. RET)
 		return self.suffix().match_regexp(bad_ins[self.arch])
 
+	def has_uncond_ctrl_flow(self):
+		return self.suffix().has_uncond_ctrl_flow()
+
+	def has_cond_ctrl_flow(self):
+		return self.suffix().has_cond_ctrl_flow()
