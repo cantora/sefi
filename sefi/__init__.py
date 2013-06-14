@@ -107,8 +107,8 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 		result += maximal_unique_gadgets(gadgets, prefix + [head])
 	
 	return result
-	
-def search_elf_for_ret_gadgets(io, backward_search_amt):
+
+def search_elf_for_gadgets(io, backward_search_amt, byte_seq):
 	from elftools.elf.elffile import ELFFile
 	import sefi.elf
 
@@ -126,7 +126,10 @@ def search_elf_for_ret_gadgets(io, backward_search_amt):
 	backward_search = lambda seq, seg, offset: \
 		backward_search_n(seq, seg, offset, dec_size, backward_search_amt)
 
-	return search_data(elf_executable_data(elf_o), "\xc3", backward_search)
+	return search_data(elf_executable_data(elf_o), byte_seq, backward_search)
+	
+def search_elf_for_ret_gadgets(io, backward_search_amt):
+	return search_elf_for_gadgets(io, backward_search_amt, "\xc3")
 
 def elf_executable_data(elf_o):
 

@@ -37,22 +37,69 @@ def opt_parser():
 		default=20
 	)
 
-	
 	parser.add_argument(
+		'-g',
+		'--gadget',
+		metavar='BYTES',
+		action='append',
+		help='search for gadgets ending in BYTES.',
+		default=[]
+	)
+
+	parser.add_argument(
+		'--ret',
+		action='store_true',
+		help='search for gadgets ending with a RET instruction (or anything logically equivalent to "pop %%sp; jmp %%sp").'
+	)
+
+	parser.add_argument(
+		'--jmp-reg',
+		action='store_true',
+		help='search for gadgets ending with a "JMP %%reg" instruction.'
+	)
+
+	parser.add_argument(
+		'--call-reg',
+		action='store_true',
+		help='search for gadgets ending with a "CALL %%reg" instruction.'
+	)
+
+	parser.add_argument(
+		'--all',
+		action='store_true',
+		help='equivalent to passing --ret, --jmp-reg, and --call-reg.'
+	)
+
+	""" 
+	TODO: parser.add_argument(
 		'--raw',
 		action='store_true', 
 		help='treat the input as raw executable bytes (by default the input is parsed as an elf executable).'
 	)
-
+	"""
 	
 	return parser
 
-
-class MissingOption(Exception):
+class SefiCliErr(Exception):
 	pass
 
+class MissingOption(SefiCliErr):
+	pass
+
+class NotImplemented(SefiCliErr):
+	pass
+
+def validate_options(options):
+	if len(options.gadget) < 1 and \
+			not options.ret and \
+			not options.jmp_reg and \
+			not options.call_reg and \
+			not options.all:
+		raise MissingOption("you must specify at least one gadget specification: -g, --ret, --jmp-reg, --call-reg or --all")
 
 def run(options):
+
+	validate_options(options)
 	
 	lgr = logging.getLogger("sefi")
 	if options.verbose >= 2:
@@ -68,42 +115,55 @@ def run(options):
 	sefi.log.set_logger(lgr)
 
 	if not options.file:
+		sys.stderr.write("using stdin as input file\n")
 		#elftools needs to be able to seek
 		#so we need to make stdin a normal file
 		with open("/tmp/sefi-stdin", "w") as f:
 			f.write(sys.stdin.read())
-			f.close
+	
 		options.file = open("/tmp/sefi-stdin", "r")
 		
-	if not options.raw:
-		result = list(sefi.search_elf_for_ret_gadgets(options.file, options.n))
+	run_elf(options)
 
-		cond_flow = []
-		uncond_flow = []
-		normal = []
-		
-		for g in result:
-			#unconditional is the strongest condition
-			if g.has_uncond_ctrl_flow():
-				uncond_flow.append(g)
-			elif g.has_cond_ctrl_flow():
-				cond_flow.append(g)
-			else:
-				normal.append(g)
+def run_elf(options):
 	
-		print("gadgets with unconditional control flow:")
-		display_gadgets(uncond_flow)
-		print("\n")
-		print("gadgets with conditional control flow:")
-		display_gadgets(cond_flow)
-		print("\n")
-		print("gadgets with no control flow:")
-		display_gadgets(normal)
-		print("\n")
+	result = []
 
-	else:
-		print("raw mode not yet implemented");
-		exit(1)
+	if options.ret or options.all:
+		result += list(sefi.search_elf_for_ret_gadgets(options.file, options.n))
+	
+	if options.jmp_reg: 
+		raise NotImplemented("jmp reg gadget search not implemented")
+
+	if options.call_reg:
+		raise NotImplemented("call reg gadget search not implemented")
+
+	if len(options.gadget) > 0:
+		raise NotImplemented("custom gadget search not implemented")
+
+	cond_flow = []
+	uncond_flow = []
+	normal = []
+	
+	for g in result:
+		#unconditional is the strongest condition
+		if g.has_uncond_ctrl_flow():
+			uncond_flow.append(g)
+		elif g.has_cond_ctrl_flow():
+			cond_flow.append(g)
+		else:
+			normal.append(g)
+
+	print("gadgets with unconditional control flow:")
+	display_gadgets(uncond_flow)
+	print("\n")
+	print("gadgets with conditional control flow:")
+	display_gadgets(cond_flow)
+	print("\n")
+	print("gadgets with no control flow:")
+	display_gadgets(normal)
+	print("\n")
+
 
 def display_gadgets(gadgets):
 	width = 60
@@ -120,7 +180,7 @@ if __name__ == "__main__":
 
 	try:
 		run(options)
-	except MissingOption as e:
+	except SefiCliErr as e:
 		print(e)
 		print("")
 		opt_p.print_help()
