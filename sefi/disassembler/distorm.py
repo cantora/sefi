@@ -63,7 +63,7 @@ class DistormInstr(Instr):
 		else:
 			comment = ""
 
-		return "%4s%-16s%2s%-16s%s%s" % (
+		return "%4s%-16s%2s%-23s%s%s" % (
 			"", addr_fmt % (self.addr),
 			"", "".join(map(lambda b: "%02x" % ord(b), self.data)),
 			self.display_str, comment

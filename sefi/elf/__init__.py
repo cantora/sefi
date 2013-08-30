@@ -2,7 +2,7 @@ import sys
 
 from elftools.elf.constants import P_FLAGS
 from elftools.construct.lib.container import Container
-
+from elftools.elf.sections import SymbolTableSection
 from sefi.interval import IntervalSet, Interval
 
 from sefi.log import debug, info, warning
@@ -120,4 +120,16 @@ def segment_data(elf_o, xsegs):
 				'if you see this message and you are sure you provided a normal ' + \
 				'elf file, then this is probably a bug.')
 		
-	
+
+def symbols(elf_o):
+	st = elf_o.get_section_by_name(b'.symtab')
+	if not st or not isinstance(st, SymbolTableSection):
+		return
+
+	for sym in st.iter_symbols():
+		yield (
+			sym.name,
+			sym.entry.st_value,
+			sym.entry.st_size
+		)
+
