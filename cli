@@ -50,7 +50,7 @@ def opt_parser():
 	parser.add_argument(
 		'--ret',
 		action='store_true',
-		help='search for gadgets ending with a RET instruction (or anything logically equivalent to "pop %%sp; jmp %%sp").'
+		help='search for gadgets ending with a RET instruction.'
 	)
 
 	parser.add_argument(
