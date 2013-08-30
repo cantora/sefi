@@ -237,3 +237,8 @@ def elf_executable_data_by_symbol(elf_o):
 				sname = nosym_name
 				ssize = 0
 				soff = offset
+
+		#yield the last symbol of this segment
+		if valid_sym():
+			yield make_sym()
+
