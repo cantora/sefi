@@ -18,6 +18,7 @@ class Instr(object):
 		self.addr = addr
 		self.data = data
 		self.dasm = dasm
+		self.frozen = True
 
 	def addr(self):
 		return self.addr
@@ -27,7 +28,29 @@ class Instr(object):
 
 	def dasm(self):
 		return self.dasm
-	
+
+	def arch(self):
+		return self.dasm.arch()
+
+	def immutable_exception(self):
+		raise Exception("%s is meant to be immutable" % self.__class__.__name__)
+
+	def __setattr__(self, *args):
+		if getattr(self, 'frozen', False):
+			return self.immutable_exception()
+		else:
+			return super(Instr, self).__setattr__(*args)
+
+	def __delattr__(self, *ignored):
+		return self.immutable_exception()
+
+	def __hash__(self):
+		return hash((
+			self.addr(),
+			self.arch(),
+			self.data
+		))
+
 	def __str__(self):
 		'''
 		returns simple form of instruction suitable
@@ -56,7 +79,7 @@ class Instr(object):
 	def __eq__(self, other):
 		return (self.data == other.data) \
 				and (self.addr == other.addr) \
-				and (self.dasm.arch() == other.dasm.arch())
+				and (self.arch() == other.arch())
 
 	def __hash__(self):
 		raise Exception("not implemented")
@@ -68,7 +91,7 @@ class Instr(object):
 		in the instructions.
 		'''
 		return (self.data == other.data) \
-				and (self.dasm.arch() == other.dasm.arch())
+				and (self.arch() == other.arch())
 
 	def match_regexp(self, *regexps):
 		for reg in regexps:

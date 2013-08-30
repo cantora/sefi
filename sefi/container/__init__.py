@@ -33,6 +33,33 @@ class InstSeq(object):
 		if not isinstance(self.dasm, sefi.disassembler.Disassembler):
 			raise TypeError("invalid dasm: %r" % self.dasm)		
 
+		self.frozen = True
+		
+
+	def __eq__(self, other):
+		return self.addr() == other.addr() \
+				and self.arch() == other.arch() \
+				and self.data == other.data
+
+	def immutable_exception(self):
+		raise Exception("%s is meant to be immutable" % self.__class__.__name__)
+
+	def __setattr__(self, *args):
+		if getattr(self, 'frozen', False):
+			return self.immutable_exception()
+		else:
+			return super(InstSeq, self).__setattr__(*args)
+
+	def __delattr__(self, *ignored):
+		return self.immutable_exception()
+
+	def __hash__(self):
+		return hash((
+			self.addr(),
+			self.arch(),
+			self.data
+		))
+		
 	def arch(self):
 		return self.dasm.arch()
 
@@ -162,9 +189,8 @@ class InstSeq(object):
 class Gadget(InstSeq):
 	
 	def __init__(self, addr, data, dasm, parent_offset):
-		super(Gadget, self).__init__(addr, data, dasm)
-
 		self.parent_offset = parent_offset
+		super(Gadget, self).__init__(addr, data, dasm)
 
 	def nop(self):
 		return self.suffix().nop()

@@ -105,8 +105,12 @@ def backward_search_n(iseq, matcher, segment, offset, n):
 		cg = g.compact()
 		if cg is not None:
 			gadgets.append(cg)
+			#debug("found gadget: %s\n%r" % (
+			#	map(lambda b: "%02x" % ord(b), cg.data),
+			#	cg
+			#))
 		else:
-			debug("compacted gadget was empty: \n%r" % g)
+			pass #debug("compacted gadget was empty: \n%r" % g)
 
 	for gadget in maximal_unique_gadgets(gadgets, []):
 		yield gadget
@@ -123,7 +127,7 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	#debug("prefix: %r" % prefix)
 
 	if arr_len <= 1:
-		#debug(" => return %r" % gadgets[0].str_seq())
+		#debug(" => return %r" % list(map(lambda iseq: iseq.str_seq(), gadgets)) )
 		return gadgets
 
 	for g in gadgets:
@@ -184,5 +188,3 @@ def elf_executable_data(elf_o):
 	for segments in sefi.elf.segment_data(elf_o, xsegs):
 		yield segments
 
-
-	

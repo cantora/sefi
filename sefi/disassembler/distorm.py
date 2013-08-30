@@ -39,9 +39,9 @@ NOP_ALL = '(?:NOP(?: |$))|(?:^MOV (.+),\s*(\\1)\s*)'
 class DistormInstr(Instr):
 
 	def __init__(self, addr, data, dasm, display):
-		super(DistormInstr, self).__init__(addr, data, dasm)
-	
+		#Instr __init__ freezes this object, so must init display_str before call to super
 		self.display_str = display
+		super(DistormInstr, self).__init__(addr, data, dasm)
 
 	def __str__(self):
 		return self.display_str
