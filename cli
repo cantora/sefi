@@ -7,6 +7,7 @@ import logging
 
 import sefi
 import sefi.log
+import sefi.matcher
 
 def opt_parser():
 
@@ -142,7 +143,7 @@ def run_elf(options):
 		for reg in options.gadget:
 			sefi.log.info("search for gadgets matching %r" % reg)
 			result += list(sefi.search_elf_for_gadgets(
-				options.file, options.n, reg
+				options.file, options.n, sefi.matcher.REMatcher(reg)
 			))
 
 	cond_flow = []
@@ -174,7 +175,7 @@ def display_gadgets(gadgets):
 
 	for g in gadgets:
 		print("-"*width)
-		print(repr(g))
+		print(g.display())
 			
 
 		

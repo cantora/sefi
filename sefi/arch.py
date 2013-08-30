@@ -1,4 +1,4 @@
-from sefi import SefiErr
+from err import SefiErr
 
 class ArchErr(SefiErr):
 	pass

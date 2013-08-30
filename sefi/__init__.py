@@ -7,9 +7,7 @@ from sefi.log import debug, info
 import sefi.container
 import sefi.matcher
 import sefi.arch
-
-class SefiErr(Exception):
-	pass
+import sefi.disassembler
 
 def search_data_for_byte_seq(segments, byte_seq, backward_search):
 	bs_len = len(byte_seq)
@@ -25,6 +23,7 @@ def search_data_for_byte_seq(segments, byte_seq, backward_search):
 
 def search_data(segments, matcher, arch, backward_search):
 
+	dasm = sefi.disassembler.find(arch)
 	for segment in segments:
 		debug('search %d bytes starting at 0x%08x' % (len(segment.data), segment.base_addr))
 
@@ -32,28 +31,31 @@ def search_data(segments, matcher, arch, backward_search):
 			iseq = sefi.container.InstSeq(
 				segment.base_addr+i,
 				segment.data[i:(i+32)], #ive heard maximum x86 len is 15, but im not sure
-				arch
+				dasm
 			)
 
 			if matcher(iseq):
-				for gadget in backward_search(iseq[0], matcher, segment, i):
+				for gadget in backward_search(iseq[0:1], matcher, segment, i):
 					yield gadget
 
 def backward_search_n_from_byte_seq(byte_seq, segment, offset, arch, n):
+	dasm = sefi.disassembler.find(arch)
+
 	return backward_search_n(
 		sefi.container.InstSeq(
 			segment.base_addr+offset,
 			byte_seq, 
-			arch
+			dasm
 		),
-		None, segment, offset, arch, n
+		None, segment, offset, n
 	)
 
-def backward_search_n(iseq, matcher, segment, offset, arch, n):
+def backward_search_n(iseq, matcher, segment, offset, n):
 	bs_len = len(iseq.data)
 	base_addr = segment.base_addr+offset
 	gadgets = []
 	is_len = len(iseq)
+	dasm = iseq.dasm
 
 	if is_len < 1:
 		raise Exception("invalid instruction sequence: %r" % iseq)
@@ -62,13 +64,16 @@ def backward_search_n(iseq, matcher, segment, offset, arch, n):
 
 	for i in range(1, n+1):
 		data = segment.data[(offset-i):(offset+bs_len)]
-		new_seq = sefi.container.InstSeq(base_addr-i, data, arch)
+		new_seq = sefi.container.InstSeq(base_addr-i, data, dasm)
 		ns_len = len(new_seq)
 
 		if ns_len <= is_len:
 			continue
 
+		#prefix is the gadget terminator at the END of the sequence
 		prefix = new_seq[-is_len:]
+		#if the prefix is not the same as the iseq we are looking for 
+		#(a gadget terminator like "ret"), then skip this offset
 		if not iseq.proc_equal(prefix):
 			continue
 
@@ -78,7 +83,11 @@ def backward_search_n(iseq, matcher, segment, offset, arch, n):
 			#we should have already looked at that so we can stop here
 			if iseq.proc_equal(subseq):
 				break 
-			if subseq.match(matcher):
+			#besides finding the exact same prefix repeated, we might
+			#also find another prefix/terminator which also matches,
+			#in which case we should have already found that sequence so
+			#we can stop here.
+			if matcher and matcher(subseq):
 				break
 
 		#sometimes the prefix we are looking for can be encoded
@@ -87,7 +96,7 @@ def backward_search_n(iseq, matcher, segment, offset, arch, n):
 		#prototype it. in this case we have to correct the offset
 		#of the prefix from the base address of the gadget.
 		real_prefix_offset = i + bs_len - len(prefix.data)
-		g = sefi.container.Gadget(base_addr - i, data, arch, real_prefix_offset)
+		g = sefi.container.Gadget(base_addr - i, data, dasm, real_prefix_offset)
 
 		if g.has_bad_ins():
 			#debug("found bad instruction, skipping...")
@@ -147,20 +156,20 @@ def search_elf_for_gadgets(io, backward_search_amt, matcher):
 	info('  elf file arch is %s' % (arch))
 	
 	backward_search = lambda seq, matcher, seg, offset: \
-		backward_search_n(seq, matcher, seg, offset, arch, backward_search_amt)
+		backward_search_n(seq, matcher, seg, offset, backward_search_amt)
 
 	return search_data(elf_executable_data(elf_o), matcher, arch, backward_search)
 	
 def search_elf_for_ret_gadgets(io, backward_search_amt):
 	return search_elf_for_gadgets(
 		io, backward_search_amt, 
-		sefi.matcher.AllRets()
+		sefi.matcher.Rets()
 	)
 
 def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
 	return search_elf_for_gadgets(
 		io, backward_search_amt, 
-		sefi.matcher.JmpRetUncond()
+		sefi.matcher.JmpRegUncond()
 	)
 
 def search_elf_for_call_reg_gadgets(io, backward_search_amt):

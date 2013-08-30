@@ -1,7 +1,4 @@
-import sefi.mnemonic
-
-import distorm3
-import re
+import sefi.disassembler
 
 class Segment(object):
 	'''
@@ -16,7 +13,13 @@ class Segment(object):
 		self.base_addr = base_addr
 
 class InstSeq(object):
-	
+
+	@staticmethod
+	def from_arch(self, base_addr, data, arch):
+		dasm = sefi.disassembler.find(arch)
+
+		return InstSeq(base_addr, data, dasm)
+
 	def __init__(self, base_addr, data, dasm):
 		self.base_addr = base_addr
 		self.data = data
@@ -27,7 +30,8 @@ class InstSeq(object):
 			raise TypeError("invalid base_addr: %r(%s)" % (self.base_addr, type(self.base_addr)))
 		if not isinstance(self.data, str):
 			raise TypeError("invalid data: %r(%s)" % (self.data, type(self.data)))
-		
+		if not isinstance(self.dasm, sefi.disassembler.Disassembler):
+			raise TypeError("invalid dasm: %r" % self.dasm)		
 
 	def arch(self):
 		return self.dasm.arch()
@@ -40,10 +44,10 @@ class InstSeq(object):
 
 	def __getitem__(self, key):
 		if type(key) is int:
-			return self.disassembly()[key]
+			return list(self.disassembly())[key]
 
 		elif type(key) is slice:
-			arr = self.disassembly()[key]
+			arr = list(self.disassembly())[key]
 			if len(arr) < 1:
 				raise TypeError("invalid key: %r" % key)
 
@@ -74,11 +78,11 @@ class InstSeq(object):
 		return self.same_str_seq(other.str_seq())
 
 
-	def __len__(self):
-		return len(self.disassembly())
-
 	def __list__(self):
-		return self.disassembly()
+		return list(self.disassembly())
+
+	def __len__(self):
+		return len(list(self.disassembly()))
 
 	def __reversed__(self):
 		return reversed(list(self))
@@ -90,7 +94,7 @@ class InstSeq(object):
 		)
 	
 	def as_prefix(self):
-		return reversed(self.str_seq())
+		return list(reversed(self.str_seq()))
 
 	def __str__(self):
 		return repr(list(self.str_seq()))
@@ -111,7 +115,7 @@ class InstSeq(object):
 		'''
 
 		ss = self.str_seq()
-		if len(ss) != len(str_seq)
+		if len(ss) != len(str_seq):
 			return False
 
 		for (x,y) in zip(self.str_seq(), str_seq):
@@ -120,13 +124,6 @@ class InstSeq(object):
 	
 		return True
 
-	def match(self, matcher):
-		for iseq in self:
-			if matcher(iseq):
-				return True
-	
-		return False
-		
 	def match_regexp(self, *regexps):
 		for ins in self:
 			if ins.match_regexp(*regexps):
@@ -147,17 +144,17 @@ class InstSeq(object):
 
 	def without_nop_prefix(self):
 		str_seq = self.str_seq()
-		for offset in range(0, len(len)):
+		for offset in range(0, len(self)):
 			if not self[offset].nop():
 				break
 
 		return self[offset:]
 		
 	def has_uncond_ctrl_flow(self):
-		return test_for(lambda ins: ins.has_uncond_ctrl_flow())
+		return self.test_for(lambda ins: ins.has_uncond_ctrl_flow())
 
 	def has_cond_ctrl_flow(self):
-		return test_for(lambda ins: ins.has_cond_ctrl_flow())
+		return self.test_for(lambda ins: ins.has_cond_ctrl_flow())
 
 	def has_ctrl_flow(self):
 		return self.has_uncond_ctrl_flow() or self.has_cond_ctrl_flow()
@@ -178,10 +175,10 @@ class Gadget(InstSeq):
 			return None
 		
 		suf = self.suffix()
-		if self[0].nop():
+		if suf[0].nop():
 			suf = suf.without_nop_prefix()
 			return Gadget(
-				suf[0].addr(),
+				suf.addr(),
 				suf.data + self.prefix().data,
 				self.dasm,
 				len(suf.data)

@@ -7,6 +7,35 @@ try:
 except Exception as e:
 	raise LibNotFound("error loading distorm3: %r" % e)
 
+RET_ALL = "^RETF?( |$)"
+
+JMP_NAMES = [
+	'JO', 	'JNO', 	'JS', 	'JNS', 	'JE', 	'JZ',
+	'JNE', 	'JNZ',	'JB',	'JNAE',	'JC',	'JNB',
+	'JAE',	'JNC', 	'JBE',	'JNA', 	'JA',	'JNBE',
+	'JL',	'JNGE',	'JGE',	'JNL',	'JLE',	'JNG',
+	'JG',	'JNLE',	'JP',	'JPE',	'JNP',	'JPO',
+	'JCXE',	'JECXZ', 'JMP'
+]
+
+REGISTER_NAMES = filter(
+	lambda str: len(str) > 0,
+	distorm3.Registers
+)
+
+JMP_REG_FMT = "^(%%s) .*(%s).*" % (
+	"|".join(REGISTER_NAMES)
+)
+
+JMP_REG_ALL = JMP_REG_FMT % ("|".join(JMP_NAMES))
+JMP_REG_UNCOND = JMP_REG_FMT % ('JMP')
+
+CALL_REG_ALL = "^CALL .*(%s).*" % (
+	"|".join(REGISTER_NAMES)
+)
+
+NOP_ALL = '(?:NOP(?: |$))|(?:^MOV (.+),\s*(\\1)\s*)'
+
 class DistormInstr(Instr):
 
 	def __init__(self, addr, data, dasm, display):
@@ -36,20 +65,12 @@ class DistormInstr(Instr):
 
 		return "%4s%-16s%2s%-16s%s%s" % (
 			"", addr_fmt % (self.addr),
-			"", "".join(map(lambda b: "%02x" % b, self.data)),
+			"", "".join(map(lambda b: "%02x" % ord(b), self.data)),
 			self.display_str, comment
 		)
 
-	def match_regexp(self, *regexps):
-		for reg in regexps:
-			#print "match %r against %r" % (reg, ins)
-			if re.search(reg, self.display_str, flags = re.IGNORECASE) is not None:
-				return True
-	
-		return False
-
 	def nop(self):
-		return self.match_regexp(NOP_ALL):
+		return self.match_regexp(NOP_ALL)
 
 	def has_uncond_ctrl_flow(self):
 		regs = [
@@ -66,10 +87,6 @@ class DistormInstr(Instr):
 			filter(lambda str: str != 'JMP', JMP_NAMES)
 		))
 
-	def has_ctrl_flow(self):
-		return self.has_cond_ctrl_flow() or \
-				self.has_uncond_ctrl_flow()
-
 	def bad(self):
 		regs = [
 			'^DB ',
@@ -82,6 +99,14 @@ class DistormInstr(Instr):
 	
 		return self.match_regexp(*regs)
 
+	def ret(self):
+		return self.match_regexp(RET_ALL)
+
+	def jmp_reg_uncond(self):
+		return self.match_regexp(JMP_REG_UNCOND)
+
+	def call_reg(self):
+		return self.match_regexp(CALL_REG_ALL)
 
 class DistormDasm(Disassembler):
 
@@ -90,7 +115,7 @@ class DistormDasm(Disassembler):
 		
 	def decode(self, addr, data):
 		for ds_inst in distorm3.Decode(addr, data, self.decode_size):
-			yield self.make_instr(ds_instr)
+			yield self.make_instr(ds_inst)
 
 	def arch(self):
 		if self.decode_size == distorm3.Decode32Bits:
@@ -98,9 +123,9 @@ class DistormDasm(Disassembler):
 		else:
 			return sefi.arch.x86_64
 
-#===========================
+
 	def make_instr(self, ds_inst):
-		return Instr(
+		return DistormInstr(
 			ds_inst[0],
 			ds_inst[3].decode('hex'),
 			self,

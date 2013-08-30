@@ -8,15 +8,22 @@ class Matcher(object):
 	def match(self, inst_seq):
 		raise Exception("not implemented")
 
+class REMatcher(Matcher):
+	def __init__(self, reg):
+		self.reg = reg
 
-class AllRets(Matcher):
-	pass
+	def match(self, inst_seq):
+		return inst_seq[0].match_regexp(self.reg)
 
-class JmpRetUncond(Matcher):
-	pass
+class Rets(Matcher):
+	def match(self, inst_seq):
+		return inst_seq[0].ret()
+
+class JmpRegUncond(Matcher):
+	def match(self, inst_seq):
+		return inst_seq[0].jmp_reg_uncond()
 
 class CallReg(Matcher):
-	pass
+	def match(self, inst_seq):
+		return inst_seq[0].call_reg()
 
-
-		

@@ -1,13 +1,15 @@
-import sefi
-from sefi.log import debug, info, warning
+import re
 
-class DisassemblerErr(sefi.SefiErr):
+from sefi.log import debug, info, warning
+from sefi.err import SefiErr
+
+class DisassemblerErr(SefiErr):
 	pass
 
 class ArchNotSupported(DisassemblerErr):
 	pass
 
-class LibNotFound(DisassemblerErr)
+class LibNotFound(DisassemblerErr):
 	pass
 
 class Instr(object):
@@ -16,6 +18,15 @@ class Instr(object):
 		self.addr = addr
 		self.data = data
 		self.dasm = dasm
+
+	def addr(self):
+		return self.addr
+
+	def data(self):
+		return self.data
+
+	def dasm(self):
+		return self.dasm
 	
 	def __str__(self):
 		'''
@@ -59,7 +70,37 @@ class Instr(object):
 		return (self.data == other.data) \
 				and (self.dasm.arch() == other.dasm.arch())
 
+	def match_regexp(self, *regexps):
+		for reg in regexps:
+			#print "match %r against %r" % (reg, ins)
+			if re.search(reg, str(self), flags = re.IGNORECASE) is not None:
+				return True
+	
+		return False
+
 	def nop(self):
+		raise Exception("not implemented")
+
+	def has_uncond_ctrl_flow(self):
+		raise Exception("not implemented")
+
+	def has_cond_ctrl_flow(self):
+		raise Exception("not implemented")
+
+	def has_ctrl_flow(self):
+		return self.has_cond_ctrl_flow() or \
+				self.has_uncond_ctrl_flow()
+
+	def bad(self):
+		raise Exception("not implemented")
+
+	def ret(self):
+		raise Exception("not implemented")
+
+	def jmp_reg_uncond(self):
+		raise Exception("not implemented")
+
+	def call_reg(self):
 		raise Exception("not implemented")
 
 class Disassembler(object):

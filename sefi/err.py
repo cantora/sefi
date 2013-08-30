@@ -1,0 +1,5 @@
+
+
+class SefiErr(Exception):
+	pass
+
