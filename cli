@@ -215,9 +215,13 @@ def run_dasm_elf(options):
 	elf_o, arch = sefi.elf_open(options.file)
 	dasm = sefi.disassembler.find(arch)
 
+	i = 0
 	for (name, addr, data) in sefi.elf_executable_data_by_symbol(elf_o):
 		if len(syms) < 1 or name in syms:
+			if i > 0:
+				print("")
 			disassemble_symbol(name, addr, data, dasm)
+			i += 1
 
 def disassemble_symbol(name, addr, data, dasm):
 	name_str = ("<%s>" % name) if name else "(NO NAME)"
