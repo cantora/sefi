@@ -133,3 +133,8 @@ def symbols(elf_o):
 			sym.entry.st_size
 		)
 
+def section_at_addr(elf_o, addr):
+	for sec in elf_o.iter_sections():
+		if addr == sec['sh_addr']:
+			return sec
+

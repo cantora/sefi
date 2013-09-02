@@ -220,10 +220,15 @@ def run_dasm_elf(options):
 		if len(syms) < 1 or name in syms:
 			if i > 0:
 				print("")
-			disassemble_symbol(name, addr, data, dasm)
+			disassemble_symbol(elf_o, name, addr, data, dasm)
 			i += 1
 
-def disassemble_symbol(name, addr, data, dasm):
+def disassemble_symbol(elf_o, name, addr, data, dasm):
+	if not name:
+		sec = sefi.elf.section_at_addr(elf_o, addr)
+		if sec:
+			name = sec.name
+
 	name_str = ("<%s>" % name) if name else "(NO NAME)"
 
 	print '%s:' % name_str
