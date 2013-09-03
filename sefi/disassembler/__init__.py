@@ -17,6 +17,8 @@ class Instr(object):
 	def __init__(self, addr, data, dasm):
 		self.addr = addr
 		self.data = data
+		if not isinstance(self.data, tuple):
+			raise TypeError("expected tuple for data")
 		self.dasm = dasm
 		self.frozen = True
 
@@ -63,6 +65,14 @@ class Instr(object):
 		returns pretty display form of instruction.
 		'''
 		raise Exception("not implemented")
+
+	def internal_display(self, addr_fmt, instr_str, comment):
+		return "%4s%-16s%2s%-23s%s%s" % (
+			"", addr_fmt % (self.addr),
+			"", "".join(map(lambda b: "%02x" % b, self.data)),
+			instr_str, comment
+		)
+
 
 	
 	def __len__(self):

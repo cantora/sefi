@@ -28,8 +28,17 @@ class InstSeq(object):
 		if not isinstance(self.base_addr, int) and \
 				not isinstance(self.base_addr, long):
 			raise TypeError("invalid base_addr: %r(%s)" % (self.base_addr, type(self.base_addr)))
-		if not isinstance(self.data, str):
+
+		if isinstance(self.data, str):
+			self.data = tuple([ord(x) for x in self.data])
+		elif isinstance(self.data, bytes) or \
+				isinstance(self.data, bytearray):
+			self.data = tuple(l)
+		elif isinstance(self.data, tuple):
+			pass
+		else:
 			raise TypeError("invalid data: %r(%s)" % (self.data, type(self.data)))
+
 		if not isinstance(self.dasm, sefi.disassembler.Disassembler):
 			raise TypeError("invalid dasm: %r" % self.dasm)		
 

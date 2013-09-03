@@ -63,11 +63,7 @@ class DistormInstr(Instr):
 		else:
 			comment = ""
 
-		return "%4s%-16s%2s%-23s%s%s" % (
-			"", addr_fmt % (self.addr),
-			"", "".join(map(lambda b: "%02x" % ord(b), self.data)),
-			self.display_str, comment
-		)
+		return self.internal_display(addr_fmt, self.display_str, comment)
 
 	def nop(self):
 		return self.match_regexp(NOP_ALL)
@@ -114,7 +110,11 @@ class DistormDasm(Disassembler):
 		self.decode_size = decode_size
 		
 	def decode(self, addr, data):
-		for ds_inst in distorm3.Decode(addr, data, self.decode_size):
+		if not isinstance(data, tuple):
+			raise TypeError("expected tuple of integers for data, got %s" % type(data))
+
+		str_data = "".join([chr(x) for x in data])
+		for ds_inst in distorm3.Decode(addr, str_data, self.decode_size):
 			yield self.make_instr(ds_inst)
 
 	def arch(self):
@@ -127,7 +127,7 @@ class DistormDasm(Disassembler):
 	def make_instr(self, ds_inst):
 		return DistormInstr(
 			ds_inst[0],
-			ds_inst[3].decode('hex'),
+			tuple([ord(x) for x in ds_inst[3].decode('hex')]),
 			self,
 			ds_inst[2]
 		)
