@@ -25,7 +25,7 @@ def from_elf_machine_arch(machine_arch):
 		return x86_64
 	elif ma == "x86":
 		return x86
-	elif ma == "arm":
+	elif ma == "ARM":
 		return arm
 	else:
 		for arch in arches:
