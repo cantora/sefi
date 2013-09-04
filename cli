@@ -208,6 +208,7 @@ def run_dasm_elf(options):
 		return
 
 	syms = set([])
+	syms_found = set([])
 	for sym in options.disassemble:
 		if isinstance(sym, str):
 			syms.add(sym)
@@ -222,6 +223,13 @@ def run_dasm_elf(options):
 				print("")
 			disassemble_symbol(elf_o, name, addr, data, dasm)
 			i += 1
+			if name in syms:
+				syms_found.add(name)
+	
+	not_found = syms - syms_found
+	if len(not_found) > 0:
+		for name in not_found:
+			print("failed to find symbol %r" % name)
 
 def disassemble_symbol(elf_o, name, addr, data, dasm):
 	if not name:
