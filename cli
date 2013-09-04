@@ -254,4 +254,9 @@ if __name__ == "__main__":
 		print("")
 		opt_p.print_help()
 		exit(1)
+	except IOError as e:
+		if e.args[0] != 32: #broken pipe
+			raise e
+
+
 
