@@ -74,6 +74,16 @@ def opt_parser():
 	)
 
 	parser.add_argument(
+		'--d-backend',
+		metavar='NAME',
+		help='use NAME as the disassembler backend. note: the backend ' + \
+				'may or may not support the architecture of the input file. ' + \
+				'valid backends: %s' % (
+					", ".join(sefi.disassembler.backend_names())
+				)
+	)
+
+	parser.add_argument(
 		'-d',
 		'--disassemble',
 		nargs='?',
@@ -139,6 +149,15 @@ def run(options):
 			f.write(sys.stdin.read())
 	
 		options.file = open("/tmp/sefi-stdin", "r")
+	
+	if options.d_backend is None:
+		pass
+	elif options.d_backend not in sefi.disassembler.backends:
+		print("invalid backend %r" % options.d_backend)
+		exit(1)
+	else:
+		#set rank of lib to arbitrary high number
+		sefi.disassembler.backend_set_rank(options.d_backend, 9999)
 		
 	run_elf(options)
 

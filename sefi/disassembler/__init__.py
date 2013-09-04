@@ -145,44 +145,75 @@ class Disassembler(object):
 	def arch(self):
 		raise Exception("not implemented")
 
-def find(arch):
-	plug_fns = [
-		try_llvm,
-		try_distorm,
-	]
+backends = {}
+rankings = {}
+def add_backend(name, rank):
+	def decr(try_fn):
+		global backends
 
+		backends[name] = try_fn
+		rankings[name] = rank
+		return try_fn
+
+	return decr
+
+def backend_set_rank(name, rank):
+	if name not in rankings:
+		raise ValueError("invalid backend name %r" % name)
+
+	rankings[name] = rank
+
+def backend_names():
+	return sorted(
+		backends.keys(),
+		cmp = lambda x, y: cmp(rankings[x], rankings[y]),
+		reverse = True
+	)
+
+def try_backend(name, arch):
+	if name not in backends:
+		raise ValueError("unknown backend: %r" % name)
+
+	try_fn = backends[name]
+	try:
+		dasm = try_fn(arch)
+		return dasm
+	except LibNotFound as e:
+		#sys.stderr.write("failed to load library: %r" % e)
+		return None
+	
+	return name
+
+def find(arch):
 	libs = []
 
-	for plug_fn in plug_fns:
-		try:
-			dasm = plug_fn(arch)
-			return dasm
-		except LibNotFound as e:
-			#sys.stderr.write("failed to load library: %r" % e)
-			pass
+	for name in backend_names():
+		result = try_backend(name, arch)
+		if result is None:
+			continue
+		elif isinstance(result, str):
+			libs.append(result)
 		else:
-			libs.append("distorm3")
+			return result
 
 	raise ArchNotSupported(
 		"could not find disassembler for %r in " % (arch) + \
 		"the following libraries: %s" % (libs)
 	)
 
- 
+def do_try(fn, arch):
+	try:
+		dasm = fn(arch)
+		return dasm
+	except ArchNotSupported:
+		return None
+
+@add_backend("distorm", 10)
 def try_distorm(arch):	
 	from sefi.disassembler import sefi_distorm
-	try:
-		dasm = sefi_distorm.new(arch)
-	except ArchNotSupported:
-		return None
+	return do_try(sefi_distorm.new, arch)
 
-	return dasm
-
+@add_backend("llvm", 5)
 def try_llvm(arch):	
 	from sefi.disassembler import sefi_llvm
-	try:
-		dasm = sefi_llvm.new(arch)
-	except ArchNotSupported:
-		return None
-
-	return dasm
+	return do_try(sefi_llvm.new, arch)
