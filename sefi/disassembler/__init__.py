@@ -1,4 +1,5 @@
 import re
+import sys
 
 from sefi.log import debug, info, warning
 from sefi.err import SefiErr
@@ -145,30 +146,43 @@ class Disassembler(object):
 		raise Exception("not implemented")
 
 def find(arch):
+	plug_fns = [
+		try_llvm,
+		try_distorm,
+	]
+
 	libs = []
 
-	try:
-		dasm = try_distorm(arch)
-	except LibNotFound:
-		pass
-	else:
-		libs.append("distorm3")
+	for plug_fn in plug_fns:
+		try:
+			dasm = plug_fn(arch)
+			return dasm
+		except LibNotFound as e:
+			#sys.stderr.write("failed to load library: %r" % e)
+			pass
+		else:
+			libs.append("distorm3")
 
-	if not dasm:
-		raise ArchNotSupported(
-			"could not find disassembler for %r in " % (arch) + \
-			"the following libraries: %s" % (libs)
-		)
+	raise ArchNotSupported(
+		"could not find disassembler for %r in " % (arch) + \
+		"the following libraries: %s" % (libs)
+	)
 
-	return dasm
  
 def try_distorm(arch):	
-	from sefi.disassembler import distorm
+	from sefi.disassembler import sefi_distorm
 	try:
-		dasm = distorm.new(arch)
+		dasm = sefi_distorm.new(arch)
 	except ArchNotSupported:
 		return None
 
 	return dasm
 
-	
+def try_llvm(arch):	
+	from sefi.disassembler import sefi_llvm
+	try:
+		dasm = sefi_llvm.new(arch)
+	except ArchNotSupported:
+		return None
+
+	return dasm
