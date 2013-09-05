@@ -2,3 +2,6 @@
 gadgets:
 	-find gadgets which start with some instructions, then proceed to
 	 an unconditional JMP which lands near a RET or a CALL %reg
+
+cli:
+	-add flag to ignore gadgets with flow control
