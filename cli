@@ -45,7 +45,10 @@ def opt_parser():
 		'--gadget',
 		metavar='REGEXP',
 		action='append',
-		help='search for gadgets ending in an instruction that matches REGEXP.',
+		help='search for gadgets ending in an instruction that matches REGEXP. ' + \
+				'note: REGEXP will have to match the specific output style of ' + \
+				'whichever disassembler backend is being used (though the match ' + \
+				'is not case sensitive)',
 		default=[]
 	)
 
