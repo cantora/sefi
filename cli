@@ -10,6 +10,7 @@ import sefi.log
 import sefi.matcher
 import sefi.disassembler
 import sefi.container
+import sefi.elf
 
 def opt_parser():
 
@@ -235,11 +236,11 @@ def run_dasm_elf(options):
 		if isinstance(sym, str):
 			syms.add(sym)
 
-	elf_o, arch = sefi.elf_open(options.file)
+	elf_o, arch = sefi.elf.open(options.file)
 	dasm = sefi.disassembler.find(arch)
 
 	i = 0
-	for (name, addr, data) in sefi.elf_executable_data_by_symbol(elf_o):
+	for (name, addr, data) in sefi.elf.executable_data_by_symbol(elf_o):
 		if len(syms) < 1 or name in syms:
 			if i > 0:
 				print("")

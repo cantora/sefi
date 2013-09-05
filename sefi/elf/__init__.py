@@ -1,5 +1,6 @@
 import sys
 
+from elftools.elf.elffile import ELFFile
 from elftools.elf.constants import P_FLAGS
 from elftools.construct.lib.container import Container
 from elftools.elf.sections import SymbolTableSection
@@ -7,6 +8,17 @@ from sefi.interval import IntervalSet, Interval
 
 from sefi.log import debug, info, warning
 import sefi.container
+import sefi.arch
+
+def open(io):
+	elf_o = ELFFile(io)
+	info('parsed elf file with %s sections and %s segments' % 
+		(elf_o.num_sections(), elf_o.num_segments())
+	)
+	arch = sefi.arch.from_elf_machine_arch(elf_o.get_machine_arch())
+	info('  elf file arch is %s' % (arch))
+	
+	return (elf_o, arch)
 
 def x_segments(elf_o):
 	''' go through elf object and find the executable segments '''
@@ -137,4 +149,61 @@ def section_at_addr(elf_o, addr):
 	for sec in elf_o.iter_sections():
 		if addr == sec['sh_addr']:
 			return sec
+
+
+
+def executable_data(elf_o):
+
+	xsegs = x_segments(elf_o)
+	for segments in segment_data(elf_o, xsegs):
+		yield segments
+
+def executable_syms(elf_o):
+	x_data = list(executable_data(elf_o))
+	for (name, val, sz) in symbols(elf_o):
+		for seg in x_data:
+			if seg.base_addr <= val and val < (seg.base_addr+len(seg.data)):
+				yield (name, val, sz)
+
+
+def executable_data_by_symbol(elf_o):
+	sym_lookup = {}
+	for (name, val, sz) in executable_syms(elf_o):
+		sym_lookup[val] = (name, sz)
+
+	debug("executable_data_by_symbol: %d symbols" % len(sym_lookup))
+
+	nosym_name = None
+	for seg in executable_data(elf_o):
+		sname = nosym_name
+		soff = 0
+		ssize = 0
+
+		for offset in range(0, len(seg.data)):
+			def make_sym():
+				return (sname, seg.base_addr + soff, seg.data[soff:offset])
+			def valid_sym():
+				return (offset-soff) > 0
+
+			addr = seg.base_addr + offset
+			
+			if addr in sym_lookup:
+				if valid_sym():
+					yield make_sym()
+
+				(sname, ssize) = sym_lookup[addr]
+				soff = offset
+			elif ssize > 0 and addr >= (seg.base_addr + soff + ssize):
+				# ^--if a symbol has zero size, we assume it
+				#extends until the next symbol
+				if valid_sym():
+					yield make_sym()
+
+				sname = nosym_name
+				ssize = 0
+				soff = offset
+
+		#yield the last symbol of this segment
+		if valid_sym():
+			yield make_sym()
 

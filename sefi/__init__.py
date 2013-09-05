@@ -8,6 +8,7 @@ import sefi.container
 import sefi.matcher
 import sefi.arch
 import sefi.disassembler
+from sefi import elf
 
 def search_data_for_byte_seq(segments, byte_seq, backward_search):
 	bs_len = len(byte_seq)
@@ -148,26 +149,13 @@ def maximal_unique_gadgets(gadgets, prefix = []):
 	
 	return result
 
-def elf_open(io):
-	from elftools.elf.elffile import ELFFile
-	import sefi.elf
-
-	elf_o = ELFFile(io)
-	info('parsed elf file with %s sections and %s segments' % 
-		(elf_o.num_sections(), elf_o.num_segments())
-	)
-	arch = sefi.arch.from_elf_machine_arch(elf_o.get_machine_arch())
-	info('  elf file arch is %s' % (arch))
-	
-	return (elf_o, arch)
-
 def search_elf_for_gadgets(io, backward_search_amt, matcher):
-	elf_o, arch = elf_open(io)
+	elf_o, arch = elf.open(io)
 	
 	backward_search = lambda seq, matcher, seg, offset: \
 		backward_search_n(seq, matcher, seg, offset, backward_search_amt)
 
-	return search_data(elf_executable_data(elf_o), matcher, arch, backward_search)
+	return search_data(elf.executable_data(elf_o), matcher, arch, backward_search)
 	
 def search_elf_for_ret_gadgets(io, backward_search_amt):
 	return search_elf_for_gadgets(
@@ -186,59 +174,3 @@ def search_elf_for_call_reg_gadgets(io, backward_search_amt):
 		io, backward_search_amt, 
 		sefi.matcher.CallReg()
 	)
-
-def elf_executable_data(elf_o):
-
-	xsegs = sefi.elf.x_segments(elf_o)
-	for segments in sefi.elf.segment_data(elf_o, xsegs):
-		yield segments
-
-def elf_executable_syms(elf_o):
-	x_data = list(elf_executable_data(elf_o))
-	for (name, val, sz) in sefi.elf.symbols(elf_o):
-		for seg in x_data:
-			if seg.base_addr <= val and val < (seg.base_addr+len(seg.data)):
-				yield (name, val, sz)
-
-
-def elf_executable_data_by_symbol(elf_o):
-	sym_lookup = {}
-	for (name, val, sz) in sefi.elf_executable_syms(elf_o):
-		sym_lookup[val] = (name, sz)
-
-	debug("elf_executable_data_by_symbol: %d symbols" % len(sym_lookup))
-
-	nosym_name = None
-	for seg in elf_executable_data(elf_o):
-		sname = nosym_name
-		soff = 0
-		ssize = 0
-
-		for offset in range(0, len(seg.data)):
-			def make_sym():
-				return (sname, seg.base_addr + soff, seg.data[soff:offset])
-			def valid_sym():
-				return (offset-soff) > 0
-
-			addr = seg.base_addr + offset
-			
-			if addr in sym_lookup:
-				if valid_sym():
-					yield make_sym()
-
-				(sname, ssize) = sym_lookup[addr]
-				soff = offset
-			elif ssize > 0 and addr >= (seg.base_addr + soff + ssize):
-				# ^--if a symbol has zero size, we assume it
-				#extends until the next symbol
-				if valid_sym():
-					yield make_sym()
-
-				sname = nosym_name
-				ssize = 0
-				soff = offset
-
-		#yield the last symbol of this segment
-		if valid_sym():
-			yield make_sym()
-
