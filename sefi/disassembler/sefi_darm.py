@@ -41,6 +41,15 @@ class BadDarmInstr(DarmInstr):
 	def call_reg(self):
 		return False
 
+BRANCH_INSTS = set([
+	"B",
+	"CBZ",
+	"CBNZ",
+	"BXJ",
+	"BX",
+	"TBB",
+	"TBH"
+])
 
 class GoodDarmInstr(DarmInstr):
 
@@ -49,7 +58,7 @@ class GoodDarmInstr(DarmInstr):
 		super(GoodDarmInstr, self).__init__(addr, data, dasm)
 		
 	def __str__(self):
-		return str(self.darminst).strip()
+		return str(self.darminst).strip() 
 
 	def nop(self):
 		reg = '^nop'
@@ -61,43 +70,90 @@ class GoodDarmInstr(DarmInstr):
 	def is_call(self):
 		return self.name() in set(["BL", "BLX"])
 
+	def writes_to_reglist(self):
+		return self.name() in set(["LDM", "POP"])
+
+	def explicitly_modifies_pc(self):
+		return self.Rd_is_pc() \
+			or (
+				self.pc_in_reglist()
+				and self.writes_to_reglist()
+			)
+
 	def is_branch(self):
-		return self.name() in set([
-			"B",
-			"CBZ",
-			"CBNZ",
-			"BXJ",
-			"BX",
-			"TBB",
-			"TBH"
-		])
+		return \
+			self.name() in BRANCH_INSTS \
+			or ((not self.is_call())
+				and (not self.ret())
+				and self.explicitly_modifies_pc()
+			)
 
 	def is_ctrl_flow(self):
-		return self.is_call() or self.is_branch()
+		return self.is_call() \
+			or self.is_branch() \
+			or self.ret()
 
 	def cond(self):
 		return str(self.darminst.cond)
 
+	def is_unconditional(self):
+		return self.cond() == "AL"
+
 	def has_uncond_ctrl_flow(self):
 		return self.is_ctrl_flow() \
-					and self.cond() == "AL"
+			and self.is_unconditional()
 
 	def has_cond_ctrl_flow(self):
 		return self.is_ctrl_flow() \
-					and self.cond() != "AL"
+			and not self.is_unconditional()
 
 	def bad(self):
 		return False
 
+	def Rd(self):
+		return str(self.darminst.Rd)
+
+	def Rn(self):
+		return str(self.darminst.Rn)
+
+	def Rn_is_sp(self):
+		return (not self.darminst.Rn is None) \
+			and self.Rn() == "PC"
+
+	def Rd_is_pc(self):
+		return (not self.darminst.Rd is None) \
+			and self.Rd() == "PC"
+
+	def reglist(self):
+		arr = str(self.darminst.reglist).strip('{}').split(',')
+		return set(filter(lambda x: len(x) > 0, arr))
+
+	def pc_in_reglist(self):
+		return "PC" in self.reglist()
+
 	def ret(self):
-		raise Exception("TODO: there is no explicit 'RET' " + \
-						"in arm, have to do some real work here")
+		return self.is_unconditional() \
+			and self.explicitly_modifies_pc() \
+			and (
+				self.name() == "POP"
+				or (
+					self.name() == "LDM"
+					and self.Rn_is_sp()
+				)
+			)
 
 	def jmp_reg_uncond(self):
-		raise Exception("TODO: not sure how to access operands in darm")
+		return self.is_unconditional() \
+			and self.is_branch() \
+			and (
+				(not self.darminst.Rm is None)
+				or (not self.darminst.Rn is None)
+			)
 
 	def call_reg(self):
-		raise Exception("TODO: not sure how to access operands in darm")
+		return self.is_unconditional() \
+			and self.is_call() \
+			and (not self.darminst.Rm is None)
 	
 class DarmDasm(Disassembler):
 
