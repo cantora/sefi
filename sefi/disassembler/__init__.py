@@ -217,3 +217,8 @@ def try_distorm(arch):
 def try_llvm(arch):	
 	from sefi.disassembler import sefi_llvm
 	return do_try(sefi_llvm.new, arch)
+
+@add_backend("darm", 10)
+def try_darm(arch):	
+	from sefi.disassembler import sefi_darm
+	return do_try(sefi_darm.new, arch)
