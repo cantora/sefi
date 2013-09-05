@@ -113,28 +113,61 @@ class Instr(object):
 		return False
 
 	def nop(self):
+		'''
+		does this instruction do nothing??
+		'''
 		raise Exception("not implemented")
 
 	def has_uncond_ctrl_flow(self):
+		'''
+		does this instruction have unconditional control
+		flow?
+		'''
 		raise Exception("not implemented")
 
 	def has_cond_ctrl_flow(self):
+		'''
+		does this instruction have conditional control
+		flow?
+		'''
 		raise Exception("not implemented")
 
 	def has_ctrl_flow(self):
+		'''
+		does this instruction have any control
+		flow at all?
+		'''
 		return self.has_cond_ctrl_flow() or \
 				self.has_uncond_ctrl_flow()
 
 	def bad(self):
+		'''
+		is this instruction bad? does it mess up
+		program execution in some way?
+		'''
 		raise Exception("not implemented")
 
 	def ret(self):
+		'''
+		does this instruction pop a value off the
+		stack and then jump to that address?
+		'''
 		raise Exception("not implemented")
 
 	def jmp_reg_uncond(self):
+		'''
+		does this instruction jump to a value
+		in a register (direct or indirect)?
+		'''
 		raise Exception("not implemented")
 
 	def call_reg(self):
+		'''
+		does this instruction call (store the address
+		of the next instruction somewhere and then jump)
+		based on a value in a register (direct or 
+		indirect)?
+		'''		
 		raise Exception("not implemented")
 
 class Disassembler(object):
