@@ -89,8 +89,7 @@ class DistormInstr(Instr):
 			'^OUTS ',
 			'^IN ',
 			'^INS ',
-			'^HLT$',
-			RET_ALL
+			'^HLT$'
 		]
 	
 		return self.match_regexp(*regs)
