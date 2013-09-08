@@ -195,6 +195,9 @@ class InstSeq(object):
 	def has_ctrl_flow(self):
 		return self.has_uncond_ctrl_flow() or self.has_cond_ctrl_flow()
 
+	def has_bad_ins(self):
+		return self.test_for(lambda ins: ins.bad() )
+
 class Gadget(InstSeq):
 	
 	def __init__(self, addr, data, dasm, parent_offset):
@@ -252,7 +255,7 @@ class Gadget(InstSeq):
 		)
 
 	def has_bad_ins(self):
-		return self.suffix().test_for(lambda ins: ins.bad() )
+		return self.suffix().has_bad_ins()
 
 	def has_uncond_ctrl_flow(self):
 		return self.suffix().has_uncond_ctrl_flow()

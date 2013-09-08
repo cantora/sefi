@@ -78,19 +78,6 @@ def backward_search_n(iseq, matcher, segment, offset, n):
 		if not iseq.proc_equal(prefix):
 			continue
 
-		if ns_len >= 2*is_len:
-			subseq = new_seq[:is_len]
-			#if we find the same sequence preceding this one
-			#we should have already looked at that so we can stop here
-			if iseq.proc_equal(subseq):
-				break 
-			#besides finding the exact same prefix repeated, we might
-			#also find another prefix/terminator which also matches,
-			#in which case we should have already found that sequence so
-			#we can stop here.
-			if matcher and matcher(subseq):
-				break
-
 		#sometimes the prefix we are looking for can be encoded
 		#in equivalent ways. in some cases the prefix will in fact
 		#be longer than the original @byte_seq that we used to
@@ -98,6 +85,24 @@ def backward_search_n(iseq, matcher, segment, offset, n):
 		#of the prefix from the base address of the gadget.
 		real_prefix_offset = i + bs_len - len(prefix.data)
 		g = sefi.container.Gadget(base_addr - i, data, dasm, real_prefix_offset)
+
+		#if we find the same sequence preceding this one
+		#we should have already looked at that so we can stop here
+		if g.suffix().proc_equal(iseq):
+			break
+
+		if matcher:
+			#besides finding the exact same prefix repeated, we might
+			#also find another prefix/terminator which also matches,
+			#in which case we should have already found that sequence so
+			#we can stop here.
+			if matcher(g.suffix()):
+				break
+
+		#a gadget with a ret in the middle wont be
+		#useful
+		if g.suffix().test_for(lambda ins: ins.ret()):
+			continue
 
 		if g.has_bad_ins():
 			#debug("found bad instruction, skipping...")
