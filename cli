@@ -99,6 +99,20 @@ def opt_parser():
 				'segments will be disassembled.'
 	)
 
+	parser.add_argument(
+		'--uncond-flow',
+		action='store_true',
+		help='allow unconditional control flow in gadgets. default: False.',
+		default=False
+	)
+
+	parser.add_argument(
+		'--cond-flow',
+		action='store_true',
+		help='allow conditional control flow in gadgets. default: False.',
+		default=False
+	)
+
 	""" 
 	TODO: parser.add_argument(
 		'--raw',
@@ -180,23 +194,31 @@ def run_search_elf(options):
 	
 	result = set([])
 
+	def set_matcher_flow(m):
+		m.uncond_flow = options.uncond_flow
+		m.cond_flow = options.cond_flow
+		return m
+
 	if options.ret or options.all:
-		for gadget in sefi.search_elf_for_ret_gadgets(options.file, options.n):
+		m = set_matcher_flow(sefi.matcher.Rets())
+		for gadget in sefi.search_elf_for_gadgets(options.file, options.n, m):
 			result.add(gadget)
 	
-	if options.jmp_reg or options.all: 
-		for gadget in sefi.search_elf_for_jmp_reg_gadgets(options.file, options.n):
+	if options.jmp_reg or options.all:
+		m = set_matcher_flow(sefi.matcher.JmpRegUncond())
+		for gadget in sefi.search_elf_for_gadgets(options.file, options.n, m):
 			result.add(gadget)
 
 	if options.call_reg or options.all:
-		for gadget in sefi.search_elf_for_call_reg_gadgets(options.file, options.n):
+		m = set_matcher_flow(sefi.matcher.CallReg())
+		for gadget in sefi.search_elf_for_gadgets(options.file, options.n, m):
 			result.add(gadget)
 
 	if len(options.gadget) > 0:
 		for reg in options.gadget:
 			sefi.log.info("search for gadgets matching %r" % reg)
-			for gadget in sefi.search_elf_for_gadgets(
-							options.file, options.n, sefi.matcher.REMatcher(reg)):
+			m = set_matcher_flow(sefi.matcher.REMatcher(reg))
+			for gadget in sefi.search_elf_for_gadgets(options.file, options.n, m):
 				result.add(gadget)
 
 	if len(result) < 1:

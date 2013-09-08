@@ -99,6 +99,14 @@ def backward_search_n(iseq, matcher, segment, offset, n):
 			if matcher(g.suffix()):
 				break
 
+			if not matcher.allow_uncond_flow():
+				if g.suffix().has_uncond_ctrl_flow():
+					continue
+
+			if not matcher.allow_cond_flow():
+				if g.suffix().has_cond_ctrl_flow():
+					continue
+
 		#a gadget with a ret in the middle wont be
 		#useful
 		if g.suffix().test_for(lambda ins: ins.ret()):
@@ -162,20 +170,3 @@ def search_elf_for_gadgets(io, backward_search_amt, matcher):
 
 	return search_data(elf.executable_data(elf_o), matcher, arch, backward_search)
 	
-def search_elf_for_ret_gadgets(io, backward_search_amt):
-	return search_elf_for_gadgets(
-		io, backward_search_amt, 
-		sefi.matcher.Rets()
-	)
-
-def search_elf_for_jmp_reg_gadgets(io, backward_search_amt):
-	return search_elf_for_gadgets(
-		io, backward_search_amt, 
-		sefi.matcher.JmpRegUncond()
-	)
-
-def search_elf_for_call_reg_gadgets(io, backward_search_amt):
-	return search_elf_for_gadgets(
-		io, backward_search_amt, 
-		sefi.matcher.CallReg()
-	)
