@@ -104,7 +104,7 @@ class GoodLLVMInstr(LLVMInstr):
 
 	def jmp_reg_uncond(self):
 		return self.llvminst.is_uncond_branch() \
-					and llvminst.is_indirect_branch()
+					and self.llvminst.is_indirect_branch()
 
 	def call_reg(self):
 		return self.llvminst.is_call() \
