@@ -58,6 +58,11 @@ gadgets with no control flow:
 [etc....]
 ```
 
+The above command searches `/bin/ls` for 'ret' gadgets. By 
+default, sefi does not display gadgets that contain control 
+flow. Pass the `--uncond-flow` and/or the `--cond-flow` 
+flags to see gadgets containing control flow.
+
 ##installation
 sefi is useless without at least one of the supported
 disassembler backends. Install any or all of the following
@@ -72,7 +77,7 @@ backends to suit your needs:
    python bindings.
 
  * LLVMPY: sefi can use the python LLVM bindings to search
-   for gadgets on x86, x86-64, ARM, and more (anything
+   for gadgets on x86, x86-64, ARM, and more (any
    target on which LLVM supports disassembling). At the 
    moment installing the python bindings is not trivial
    though. You will need to compile the development version
